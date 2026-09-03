@@ -570,7 +570,7 @@ function buildSeed(){
   return {clients, caseworkers, baselines, records, signals, referrals, policies: POLICY_SEED.slice(), audit, seededAt:new Date().toISOString()};
 }
 
-const STORAGE_KEY = 'ongicheck-mvp-state-v2';
+const STORAGE_KEY = 'ongicheck-mvp-state-v3';
 function loadState(){
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
