@@ -299,28 +299,20 @@ const {useState,useEffect,useMemo,useRef} = React;
    ============================================================ */
 
 const DOMAINS = [
-  {key:'contact',    label:'연락·활동',       hint:'반복 미응답, 말수 급감, 외출 중단, 약속 반복 누락',
-   kw:['전화','연락','외출','경로당','통화','방문','말수','약속','만남','두문불출']},
-  {key:'nutrition',  label:'식사·영양·수분',   hint:'식사량 감소, 식사 준비 불가, 수분 섭취 곤란',
-   kw:['식사','밥','반찬','죽','입맛','물','수분','끼니','드심','드셨','굶']},
-  {key:'sleep',      label:'수면·피로',       hint:'불면, 과다수면, 낮밤 역전, 지속 피로',
-   kw:['잠','수면','불면','낮잠','피곤','피로','새벽','뒤척']},
-  {key:'pain',       label:'통증·질환',       hint:'새 통증, 통증 악화, 진료 지연, 퇴원 후 회복문제',
-   kw:['아프','통증','쑤시','병원','진료','수술','퇴원','기침','열이']},
-  {key:'fall',       label:'낙상·거동',       hint:'넘어짐, 어지럼, 계단·화장실·외출 어려움',
-   kw:['넘어지','낙상','어지럼','계단','화장실','거동','휘청','주저앉']},
-  {key:'medication', label:'복약·의료이용',    hint:'복약 누락·중복 의심, 예약 누락, 비용·이동 장벽',
-   kw:['약','복약','투약','처방','약값','병원비','예약']},
-  {key:'cognition',  label:'인지·의사소통',    hint:'단기기억·계산·시간장소 혼동, 화기관리 어려움',
-   kw:['깜빡','기억','헷갈','날짜','가스','불 끄','혼동','치매','또 물어']},
-  {key:'emotion',    label:'정서·고립',       hint:'우울표현, 흥미 저하, 자살 암시, 가족·이웃 단절',
-   kw:['우울','기분','외롭','쓸쓸','의욕','흥미','눈물','의미가 없','없어지고 싶','자살','자해','죽고 싶']},
-  {key:'hygiene',    label:'위생·일상생활',    hint:'목욕·청소·세탁·장보기·금전관리 어려움',
-   kw:['목욕','청소','빨래','세탁','장보기','금전','정리','씻']},
-  {key:'housing',    label:'주거·안전·경제',   hint:'화재·냉난방·누수·공과금·병원비·학대 의심',
-   kw:['보일러','난방','냉방','누수','공과금','화재','전기','가스비','월세','학대','폭력','때리','전기세']},
+  {key:'nutrition',  label:'식사·수분',    hint:'식사량 감소, 끼니 거름, 식욕 저하, 수분 섭취',
+   kw:['식사','밥','반찬','죽','입맛','식욕','물','수분','끼니','드심','드셨','굶']},
+  {key:'sleep',      label:'수면·피로',    hint:'불면, 과다수면, 밤낮 변화, 기력 저하',
+   kw:['잠','수면','불면','낮잠','피곤','피로','새벽','뒤척','기력','무기력','밤낮']},
+  {key:'pain',       label:'통증·건강',    hint:'통증 발생·악화, 호흡곤란, 발열 등 건강 이상',
+   kw:['아프','통증','쑤시','병원','진료','수술','퇴원','기침','열이','발열','호흡','숨차']},
+  {key:'fall',       label:'낙상·거동',    hint:'실제 낙상, 휘청거림, 보행 곤란, 외출 어려움',
+   kw:['넘어지','낙상','어지럼','어지러','계단','화장실','거동','휘청','주저앉','외출','나가지','보행','걷기']},
+  {key:'medication', label:'복약·의료이용', hint:'약 누락·중복, 처방약 부족, 병원 방문 필요',
+   kw:['약','복약','투약','처방','약값','예약']},
 ];
 const DOMAIN_MAP = Object.fromEntries(DOMAINS.map(d=>[d.key,d]));
+/* 자살·자해·화재·학대 등 사전 정의 규칙으로 즉시 알림되는 표현 — 5개 핵심 위험영역과 별개로 항상 감지한다 */
+DOMAIN_MAP.emergency = {key:'emergency', label:'긴급 표현', hint:'자살·자해·화재·학대 등 즉시 확인이 필요한 표현'};
 
 /* 생활지원사 4명 — 담당자는 로그인 없이 화면에서 본인을 직접 선택한다. 이름은 언제든 바꿔쓸 수 있다. */
 const CASEWORKER_SEED = [
@@ -354,8 +346,11 @@ const REFERRAL_LABEL = {
 const BASELINE_LABEL = {'정상':'good','어려움':'warn','미확인':'neutral'};
 
 const QUESTIONS_REGULAR = [
-  '요즘 식사는 하루 몇 끼 정도 드시나요?','수면은 잘 취하고 계신가요?','요즘 불편하거나 아픈 곳이 있으신가요?',
-  '드시는 약은 거르지 않고 챙기고 계신가요?','최근 넘어지거나 어지러운 적 있으셨나요?','요 며칠 밖에 나가신 적 있으신가요?','요즘 기분은 어떠신가요?',
+  '요즘 식사는 하루 몇 끼 정도 드시나요? 물은 충분히 드시나요?',
+  '수면은 잘 취하고 계신가요? 낮에 기력은 어떠신가요?',
+  '요즘 불편하거나 아픈 곳, 열이나 기침은 없으신가요?',
+  '최근 넘어지거나 어지러운 적 있으셨나요? 밖에 나가시는 데 어려움은 없으신가요?',
+  '드시는 약은 거르지 않고 챙기고 계신가요? 병원 갈 일은 없으신가요?',
 ];
 const QUESTIONS_SITUATION = [
   {tag:'폭염', q:'냉방기구는 잘 작동하시나요? 물은 충분히 드시고 계신가요?'},
@@ -365,25 +360,25 @@ const QUESTIONS_SITUATION = [
 
 /* 정책·기관 DB (부록 B 구조, 공식 출처는 문서 부록 C 참고자료 기반) */
 const POLICY_SEED = [
-  {id:'P-01', name:'노인맞춤돌봄서비스 (특화서비스)', org:'수행기관 · 읍면동', region:'전남 광주 전역', domains:['emotion','contact','hygiene'],
+  {id:'P-01', name:'노인맞춤돌봄서비스 (특화서비스)', org:'수행기관 · 읍면동', region:'전남 광주 전역', domains:['nutrition','fall'],
    cond:'만 65세 이상 독거·조손·고령부부 등 돌봄필요군', apply:'읍면동 접수 → 수행기관 사정 → 서비스 연계', contact:'관할 읍면동 행정복지센터', source:'보건복지부 2026년 노인맞춤돌봄서비스 사업안내', date:'2026-08-24'},
-  {id:'P-02', name:'지역사회 통합돌봄 창구', org:'시군구 통합돌봄창구', region:'전남 광주 전역', domains:['housing','hygiene','medication','contact'],
+  {id:'P-02', name:'지역사회 통합돌봄 창구', org:'시군구 통합돌봄창구', region:'전남 광주 전역', domains:['medication','fall','nutrition'],
    cond:'복합욕구·퇴원 후 돌봄 공백이 있는 주민', apply:'읍면동·시군구 신청 → 조사 → 개인지원계획 수립', contact:'관할 시군구 통합돌봄창구', source:'보건복지부 지역사회 통합돌봄 한눈에 보기', date:'2026-08-24'},
-  {id:'P-03', name:'정신건강복지센터 상담', org:'지역 정신건강복지센터', region:'전남 광주 전역', domains:['emotion'],
+  {id:'P-03', name:'정신건강복지센터 상담', org:'지역 정신건강복지센터', region:'전남 광주 전역', domains:['emergency'],
    cond:'우울·고립·정서적 어려움을 겪는 주민 (제한 없음)', apply:'센터 direct 상담 신청 또는 담당자 의뢰', contact:'국가정신건강정보포털 안내', source:'국가정신건강정보포털', date:'2026-08-24'},
-  {id:'P-04', name:'자살예방상담전화 109', org:'보건복지상담센터', region:'전국', domains:['emotion'],
+  {id:'P-04', name:'자살예방상담전화 109', org:'보건복지상담센터', region:'전국', domains:['emergency'],
    cond:'자살·자해 위기 표현이 있는 경우 (24시간)', apply:'즉시 전화 연결, 별도 신청 불요', contact:'109 (24시간)', source:'보건복지상담센터 109', date:'2026-08-24'},
-  {id:'P-05', name:'치매안심센터 선별검사', org:'관할 치매안심센터', region:'전남 광주 전역', domains:['cognition'],
+  {id:'P-05', name:'치매안심센터 선별검사', org:'관할 치매안심센터', region:'전남 광주 전역', domains:['medication'],
    cond:'인지저하 의심 소견이 있는 60세 이상', apply:'센터 방문·전화 예약 후 선별검사', contact:'관할 보건소 치매안심센터', source:'보건복지부 정책 안내', date:'2026-08-24'},
   {id:'P-06', name:'보건소 방문건강관리', org:'관할 보건소', region:'전남 광주 전역', domains:['medication','pain'],
    cond:'복약관리·만성질환 관리가 필요한 주민', apply:'보건소 등록 후 방문간호 연계', contact:'관할 보건소', source:'보건복지부 정책 안내', date:'2026-08-24'},
-  {id:'P-07', name:'장기요양 등급 재사정', org:'국민건강보험공단', region:'전국', domains:['fall','hygiene','nutrition'],
+  {id:'P-07', name:'장기요양 등급 재사정', org:'국민건강보험공단', region:'전국', domains:['fall','nutrition'],
    cond:'일상생활 기능저하가 지속되는 65세 이상', apply:'공단 신청 → 등급판정 → 서비스 연계', contact:'국민건강보험공단', source:'보건복지부 정책 안내', date:'2026-08-24'},
-  {id:'P-08', name:'긴급복지지원 (129)', org:'읍면동 행정복지센터', region:'전남 광주 전역', domains:['housing'],
+  {id:'P-08', name:'긴급복지지원 (129)', org:'읍면동 행정복지센터', region:'전남 광주 전역', domains:['medication'],
    cond:'공과금·병원비 등 위기상황에 처한 가구', apply:'읍면동 신청 또는 129 상담 후 연계', contact:'129 (24시간) / 관할 읍면동', source:'보건복지상담센터 129', date:'2026-08-24'},
-  {id:'P-09', name:'독거노인 응급안전안심서비스', org:'수행기관', region:'전남 광주 전역', domains:['fall','housing','contact'],
+  {id:'P-09', name:'독거노인 응급안전안심서비스', org:'수행기관', region:'전남 광주 전역', domains:['fall'],
    cond:'화재·활동량·응급호출 감지 장비가 필요한 독거 어르신', apply:'수행기관 신청 → 장비 설치 대상 여부 검토', contact:'관할 수행기관', source:'보건복지부 응급안전안심서비스 안내', date:'2026-08-24'},
-  {id:'P-10', name:'노인보호전문기관 (1577-1389)', org:'중앙노인보호전문기관', region:'전국', domains:['housing','emotion'],
+  {id:'P-10', name:'노인보호전문기관 (1577-1389)', org:'중앙노인보호전문기관', region:'전국', domains:['emergency'],
    cond:'학대·방임이 의심되는 경우 (즉시 대응)', apply:'1577-1389 또는 112 즉시 신고', contact:'1577-1389 (24시간)', source:'중앙노인보호전문기관', date:'2026-08-24'},
 ];
 
@@ -398,7 +393,7 @@ function fmtDateTime(iso){ if(!iso) return '-'; try{ return new Date(iso).toLoca
 function daysUntil(iso){ if(!iso) return null; const d=new Date(iso+'T00:00:00'); const t=new Date(); t.setHours(0,0,0,0); return Math.round((d-t)/86400000); }
 function includesAny(text, arr){ return arr.some(w=>text.includes(w)); }
 
-/* 메모를 10개 영역으로 구조화하는 규칙기반 분석 엔진 (실제 AI 호출 대신 데모용 키워드 매칭) */
+/* 메모를 5개 핵심 위험영역으로 구조화하는 규칙기반 분석 엔진 (실제 AI 호출 대신 데모용 키워드 매칭) */
 function analyzeMemo(memo, baseline){
   const text = memo || '';
   const rows = DOMAINS.map(d=>{
@@ -423,6 +418,18 @@ function analyzeMemo(memo, baseline){
     return {domain:d.key,label:d.label,status,content,time,excerpt};
   });
   const emergency = includesAny(text, EMERGENCY_WORDS);
+  if(emergency){
+    const hitWord = EMERGENCY_WORDS.find(w=>text.includes(w));
+    const idx = text.indexOf(hitWord);
+    const start = Math.max(0, idx-9);
+    const end = Math.min(text.length, idx+hitWord.length+9);
+    const timeHit = TIME_WORDS.find(t=>text.includes(t.kw));
+    rows.push({
+      domain:'emergency', label:'긴급 표현', status:'이상',
+      content:'자살·자해·화재·학대 등 즉시 확인이 필요한 표현 감지',
+      time: timeHit ? timeHit.label : '최근', excerpt: text.slice(start,end).trim(),
+    });
+  }
   return {rows, emergency};
 }
 
@@ -443,11 +450,9 @@ function classifyChange(domainKey, currentStatus, baseline, priorSignalsForClien
 
 function suggestUrgency(rows, emergency){
   if(emergency) return '긴급확인';
-  const abnormal = rows.filter(r=>r.status==='이상');
-  const todayDomains = ['medication','fall','nutrition','cognition','pain'];
-  const referralDomains = ['emotion','housing','hygiene'];
-  if(abnormal.some(r=>todayDomains.includes(r.domain) && (r.changeType==='신규'||r.changeType==='악화'))) return '당일확인';
-  if(abnormal.some(r=>referralDomains.includes(r.domain))) return '연계검토';
+  const abnormal = rows.filter(r=>r.status==='이상' && r.domain!=='emergency');
+  if(abnormal.some(r=>r.changeType==='신규' || r.changeType==='악화')) return '당일확인';
+  if(abnormal.some(r=>r.changeType==='반복')) return '연계검토';
   if(abnormal.length>0) return '추적관찰';
   return '특이신호없음';
 }
@@ -481,7 +486,7 @@ function buildSeed(){
 
   const baselines = [
     (()=>{ const b=emptyBaseline('C-1','전담사회복지사 이○○'); DOMAINS.forEach(d=>b.domains[d.key]='정상'); b.date=isoDaysAgo(40); return b; })(),
-    (()=>{ const b=emptyBaseline('C-2','전담사회복지사 이○○'); DOMAINS.forEach(d=>b.domains[d.key]='정상'); b.domains.emotion='미확인'; b.date=isoDaysAgo(25); return b; })(),
+    (()=>{ const b=emptyBaseline('C-2','전담사회복지사 이○○'); DOMAINS.forEach(d=>b.domains[d.key]='정상'); b.domains.sleep='미확인'; b.date=isoDaysAgo(25); return b; })(),
     (()=>{ const b=emptyBaseline('C-3','전담사회복지사 이○○'); DOMAINS.forEach(d=>b.domains[d.key]='정상'); b.date=isoDaysAgo(12); return b; })(),
   ];
 
@@ -525,7 +530,7 @@ function buildSeed(){
   /* --- 시나리오 B: 소나무 어르신 — 긴급 표현 --- */
   addRecord('C-2', isoDaysAgo(20)+'T14:10:00', '전화', '특이사항 없음. 식사 잘 하시고 잠도 잘 주무신다고 함.');
   const b = addRecord('C-2', isoDaysAgo(2)+'T14:30:00', '전화', '사는 게 의미가 없고 없어지고 싶다는 말씀을 하심. 최근 부인과 사별 후 많이 외로워하심.');
-  const sigEmergency = signals.find(s=>s.clientId==='C-2' && s.domain==='emotion');
+  const sigEmergency = signals.find(s=>s.clientId==='C-2' && s.domain==='emergency');
   if(sigEmergency){
     sigEmergency.lifecycle='조치중';
     sigEmergency.reviewNote='자살 암시 표현으로 규칙 기반 즉시 알림. 전담사회복지사가 즉시 재연락하여 상태 확인, 109 안내 및 방문 예정.';
@@ -539,7 +544,7 @@ function buildSeed(){
   /* --- 시나리오 C: 감나무 어르신 — 오탐과 경고 종결 --- */
   addRecord('C-3', isoDaysAgo(8)+'T11:00:00', '전화', '식사 잘 하시고 큰 불편 없으시다고 함.');
   addRecord('C-3', isoDaysAgo(1)+'T11:15:00', '전화', '전화를 못 받았다는 기록. 재통화 결과 병원 진료 중이어서 통화를 못 받은 것으로 확인됨.');
-  const sigFalse = signals.find(s=>s.clientId==='C-3' && s.domain==='contact');
+  const sigFalse = signals.find(s=>s.clientId==='C-3' && s.domain==='pain');
   if(sigFalse){
     sigFalse.lifecycle='종결';
     sigFalse.urgency='특이신호없음';
