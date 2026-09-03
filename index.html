@@ -1,0 +1,1462 @@
+<title>잘한다잘한다</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+:root{
+  --paper:#EFEEE8;
+  --paper-raised:#FBFAF6;
+  --ink:#211D19;
+  --ink-soft:#5B5449;
+  --ink-faint:#8A8276;
+  --line:#DCD8CE;
+  --line-strong:#C7C2B5;
+  --teal-deep:#17383B;
+  --teal:#2C5F63;
+  --teal-soft:#DCE7E6;
+  --amber:#BD5B1D;
+  --amber-soft:#F3E1CE;
+  --danger:#B93A3A;
+  --danger-soft:#F3DEDA;
+  --warn:#A9820A;
+  --warn-soft:#F1E6C4;
+  --info:#386591;
+  --info-soft:#DCE6EF;
+  --neutral:#6B6459;
+  --neutral-soft:#E7E3D9;
+  --good:#4B7F52;
+  --good-soft:#DEEBDD;
+  --shadow: 0 1px 2px rgba(23,20,15,0.06), 0 6px 20px -10px rgba(23,20,15,0.25);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#161412;
+    --paper-raised:#211E1A;
+    --ink:#ECE7DE;
+    --ink-soft:#B7AFA1;
+    --ink-faint:#867E70;
+    --line:#38332B;
+    --line-strong:#4A4437;
+    --teal-deep:#0F2426;
+    --teal:#4C8A8E;
+    --teal-soft:#1E3335;
+    --amber:#E08A44;
+    --amber-soft:#3A2A18;
+    --danger:#E07070;
+    --danger-soft:#3A2222;
+    --warn:#D9B23C;
+    --warn-soft:#362D14;
+    --info:#7DA3C7;
+    --info-soft:#1E2C38;
+    --neutral:#A39A8A;
+    --neutral-soft:#2C2822;
+    --good:#7FB587;
+    --good-soft:#1F2E20;
+    --shadow: 0 1px 2px rgba(0,0,0,0.4), 0 6px 24px -10px rgba(0,0,0,0.6);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#161412;
+  --paper-raised:#211E1A;
+  --ink:#ECE7DE;
+  --ink-soft:#B7AFA1;
+  --ink-faint:#867E70;
+  --line:#38332B;
+  --line-strong:#4A4437;
+  --teal-deep:#0F2426;
+  --teal:#4C8A8E;
+  --teal-soft:#1E3335;
+  --amber:#E08A44;
+  --amber-soft:#3A2A18;
+  --danger:#E07070;
+  --danger-soft:#3A2222;
+  --warn:#D9B23C;
+  --warn-soft:#362D14;
+  --info:#7DA3C7;
+  --info-soft:#1E2C38;
+  --neutral:#A39A8A;
+  --neutral-soft:#2C2822;
+  --good:#7FB587;
+  --good-soft:#1F2E20;
+  --shadow: 0 1px 2px rgba(0,0,0,0.4), 0 6px 24px -10px rgba(0,0,0,0.6);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:'IBM Plex Sans KR', -apple-system, sans-serif;
+  font-size:14px;
+  line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4{font-family:'Gowun Batang','IBM Plex Sans KR',serif;text-wrap:balance;margin:0;font-weight:700;}
+.mono{font-family:'IBM Plex Mono', monospace; font-variant-numeric:tabular-nums;}
+button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit;}
+a{color:var(--teal);}
+::selection{background:var(--amber-soft);}
+
+.app-shell{display:flex;min-height:100vh;}
+
+/* ---------- sidebar ---------- */
+.sidebar{
+  width:232px;flex:none;background:var(--teal-deep);color:#EFEAE0;
+  display:flex;flex-direction:column;padding:20px 14px;gap:18px;
+  position:sticky;top:0;height:100vh;overflow-y:auto;
+}
+.brand{display:flex;flex-direction:column;gap:3px;padding:2px 8px 10px;border-bottom:1px solid rgba(239,234,224,0.14);}
+.brand-mark{font-family:'Gowun Batang',serif;font-size:19px;font-weight:700;color:#F4E3CC;line-height:1.25;}
+.brand-sub{font-size:10.5px;color:#9FB9B8;letter-spacing:.04em;}
+.role-switch{display:flex;flex-direction:column;gap:6px;padding:0 8px;}
+.role-switch label{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:#8FADAC;}
+.role-switch select{
+  background:#1F4548;border:1px solid #2F5D5F;color:#EFEAE0;border-radius:8px;padding:7px 9px;width:100%;
+}
+.nav{display:flex;flex-direction:column;gap:2px;margin-top:4px;}
+.nav-item{
+  display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:9px;
+  color:#CBD9D6;text-decoration:none;cursor:pointer;border:1px solid transparent;font-size:13.5px;
+  background:transparent;text-align:left;width:100%;
+}
+.nav-item:hover{background:rgba(239,234,224,0.08);}
+.nav-item.active{background:#1F4548;color:#F7F1E6;border-color:#33605F;}
+.nav-ico{width:16px;text-align:center;font-size:13px;opacity:.9;}
+.sidebar-foot{margin-top:auto;padding:10px 8px 0;border-top:1px solid rgba(239,234,224,0.14);font-size:10.5px;color:#8FADAC;}
+
+/* ---------- main ---------- */
+.main{flex:1;min-width:0;display:flex;flex-direction:column;}
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding:16px 28px;border-bottom:1px solid var(--line);background:var(--paper-raised);
+  position:sticky;top:0;z-index:5;
+}
+.topbar-title{display:flex;flex-direction:column;gap:2px;}
+.topbar-title h1{font-size:19px;}
+.topbar-crumb{font-size:11.5px;color:var(--ink-faint);}
+.search-input{
+  border:1px solid var(--line-strong);background:var(--paper);border-radius:9px;padding:8px 12px;
+  min-width:220px;
+}
+.content{padding:24px 28px 60px;max-width:1180px;}
+
+.disclaimer{
+  background:var(--amber-soft);border:1px solid var(--amber);color:var(--ink);
+  border-radius:10px;padding:10px 14px;font-size:12px;line-height:1.6;margin-bottom:20px;
+}
+
+/* ---------- buttons ---------- */
+.btn{
+  border-radius:8px;border:1px solid var(--line-strong);background:var(--paper-raised);color:var(--ink);
+  padding:8px 14px;cursor:pointer;font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:6px;
+}
+.btn:hover{border-color:var(--teal);}
+.btn--primary{background:var(--teal);border-color:var(--teal);color:#fff;}
+.btn--primary:hover{background:var(--teal-deep);}
+.btn--amber{background:var(--amber);border-color:var(--amber);color:#fff;}
+.btn--danger{background:var(--danger);border-color:var(--danger);color:#fff;}
+.btn--ghost{background:transparent;border-color:transparent;}
+.btn--sm{padding:5px 10px;font-size:12px;}
+.btn[disabled]{opacity:.45;cursor:not-allowed;}
+
+/* ---------- cards / layout ---------- */
+.card{
+  background:var(--paper-raised);border:1px solid var(--line);border-radius:12px;padding:18px;box-shadow:var(--shadow);
+}
+.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;}
+.section-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:28px 0 12px;}
+.section-head:first-child{margin-top:0;}
+.section-head h2{font-size:16px;}
+.section-head .count{font-size:11.5px;color:var(--ink-faint);}
+.two-col{display:grid;grid-template-columns:1.1fr 0.9fr;gap:18px;align-items:start;}
+@media(max-width:900px){.two-col{grid-template-columns:1fr;}}
+
+/* ---------- badges/chips ---------- */
+.badge{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:3px 10px;font-size:11.5px;font-weight:600;white-space:nowrap;}
+.badge--danger{background:var(--danger-soft);color:var(--danger);}
+.badge--warn{background:var(--warn-soft);color:var(--warn);}
+.badge--info{background:var(--info-soft);color:var(--info);}
+.badge--neutral{background:var(--neutral-soft);color:var(--neutral);}
+.badge--good{background:var(--good-soft);color:var(--good);}
+.badge--amber{background:var(--amber-soft);color:var(--amber);}
+.dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex:none;}
+
+/* ---------- priority cards ---------- */
+.priority-card{
+  display:flex;gap:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--paper-raised);
+  box-shadow:var(--shadow); cursor:pointer;
+}
+.priority-card:hover{border-color:var(--line-strong);}
+.stripe{width:6px;flex:none;}
+.stripe--danger{background:var(--danger);}
+.stripe--warn{background:var(--warn);}
+.stripe--info{background:var(--info);}
+.stripe--neutral{background:var(--neutral);}
+.stripe--good{background:var(--good);}
+.pc-body{padding:14px 16px;flex:1;display:flex;flex-direction:column;gap:8px;}
+.pc-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+.pc-name{font-weight:600;font-size:14.5px;}
+.pc-meta{font-size:11.5px;color:var(--ink-faint);}
+.pc-excerpt{font-size:12.5px;color:var(--ink-soft);background:var(--paper);border-left:3px solid var(--line-strong);padding:6px 10px;border-radius:4px;}
+.pc-foot{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:var(--ink-faint);}
+
+/* ---------- table ---------- */
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--paper-raised);}
+table{border-collapse:collapse;width:100%;min-width:640px;}
+th,td{padding:10px 14px;text-align:left;border-bottom:1px solid var(--line);font-size:13px;vertical-align:top;}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint);font-weight:600;background:var(--paper);}
+tr:last-child td{border-bottom:none;}
+tr.clickable:hover{background:var(--teal-soft);cursor:pointer;}
+
+/* ---------- forms ---------- */
+.field{display:flex;flex-direction:column;gap:5px;}
+.field label{font-size:11.5px;color:var(--ink-soft);font-weight:600;}
+.field .hint{font-size:11px;color:var(--ink-faint);font-weight:400;}
+.field input[type=text],.field input[type=date],.field input[type=time],.field select,.field textarea{
+  border:1px solid var(--line-strong);background:var(--paper);border-radius:8px;padding:9px 11px;width:100%;
+}
+.field textarea{resize:vertical;min-height:78px;}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.form-grid.cols-3{grid-template-columns:1fr 1fr 1fr;}
+@media(max-width:640px){.form-grid,.form-grid.cols-3{grid-template-columns:1fr;}}
+.checkline{display:flex;align-items:flex-start;gap:8px;font-size:12.5px;color:var(--ink-soft);}
+.checkline input{margin-top:3px;}
+
+.domain-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;}
+.domain-cell{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--paper);}
+.domain-cell .dl{font-weight:600;font-size:12.5px;margin-bottom:6px;}
+.seg{display:flex;border:1px solid var(--line-strong);border-radius:7px;overflow:hidden;}
+.seg button{flex:1;border:none;background:var(--paper-raised);padding:6px 4px;font-size:11.5px;cursor:pointer;color:var(--ink-soft);border-right:1px solid var(--line-strong);}
+.seg button:last-child{border-right:none;}
+.seg button.on{background:var(--teal);color:#fff;}
+.seg button.on.bad{background:var(--warn);}
+.seg button.on.unk{background:var(--neutral);}
+
+/* ---------- stepper ---------- */
+.stepper{display:flex;gap:6px;margin-bottom:20px;flex-wrap:wrap;}
+.step{font-size:11.5px;padding:6px 12px;border-radius:999px;background:var(--paper);border:1px solid var(--line);color:var(--ink-faint);}
+.step.active{background:var(--teal);border-color:var(--teal);color:#fff;font-weight:600;}
+.step.done{background:var(--teal-soft);border-color:var(--teal);color:var(--teal);}
+
+/* ---------- timeline ---------- */
+.timeline{position:relative;padding-left:22px;}
+.timeline:before{content:"";position:absolute;left:6px;top:4px;bottom:4px;width:2px;background:var(--line);}
+.tl-item{position:relative;padding-bottom:20px;}
+.tl-dot{position:absolute;left:-22px;top:3px;width:12px;height:12px;border-radius:50%;background:var(--teal);border:2px solid var(--paper-raised);}
+.tl-when{font-size:11px;color:var(--ink-faint);}
+.tl-title{font-weight:600;font-size:13px;margin:2px 0 4px;}
+.tl-body{font-size:12.5px;color:var(--ink-soft);}
+
+/* ---------- stat tiles ---------- */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;}
+.stat-tile{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:var(--paper-raised);}
+.stat-num{font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:600;}
+.stat-label{font-size:11.5px;color:var(--ink-faint);margin-top:2px;}
+
+.empty{border:1px dashed var(--line-strong);border-radius:12px;padding:28px;text-align:center;color:var(--ink-faint);font-size:13px;}
+.tag-row{display:flex;flex-wrap:wrap;gap:6px;}
+.tag{background:var(--teal-soft);color:var(--teal);border-radius:999px;padding:4px 10px;font-size:11.5px;border:1px solid transparent;cursor:pointer;}
+.tag.off{background:var(--paper);color:var(--ink-faint);border-color:var(--line);}
+.kv{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;padding:5px 0;border-bottom:1px dashed var(--line);}
+.kv:last-child{border-bottom:none;}
+.kv .k{color:var(--ink-faint);}
+.locked{background:var(--paper);border:1px dashed var(--line-strong);border-radius:8px;padding:12px;font-size:12px;color:var(--ink-faint);}
+.small{font-size:11.5px;color:var(--ink-faint);}
+hr.rule{border:none;border-top:1px solid var(--line);margin:16px 0;}
+
+@media(max-width:820px){
+  .app-shell{flex-direction:column;}
+  .sidebar{width:100%;height:auto;position:relative;flex-direction:row;flex-wrap:wrap;align-items:center;}
+  .nav{flex-direction:row;flex-wrap:wrap;}
+  .sidebar-foot{display:none;}
+  .content{padding:18px 16px 40px;}
+  .topbar{padding:14px 16px;}
+}
+</style>
+
+<div id="root"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js"></script>
+
+<script type="text/babel" data-presets="react">
+const {useState,useEffect,useMemo,useRef} = React;
+
+/* ============================================================
+   상수 정의: 위험영역, 질문은행, 정책DB, 상태 라벨
+   ============================================================ */
+
+const DOMAINS = [
+  {key:'contact',    label:'연락·활동',       hint:'반복 미응답, 말수 급감, 외출 중단, 약속 반복 누락',
+   kw:['전화','연락','외출','경로당','통화','방문','말수','약속','만남','두문불출']},
+  {key:'nutrition',  label:'식사·영양·수분',   hint:'식사량 감소, 식사 준비 불가, 수분 섭취 곤란',
+   kw:['식사','밥','반찬','죽','입맛','물','수분','끼니','드심','드셨','굶']},
+  {key:'sleep',      label:'수면·피로',       hint:'불면, 과다수면, 낮밤 역전, 지속 피로',
+   kw:['잠','수면','불면','낮잠','피곤','피로','새벽','뒤척']},
+  {key:'pain',       label:'통증·질환',       hint:'새 통증, 통증 악화, 진료 지연, 퇴원 후 회복문제',
+   kw:['아프','통증','쑤시','병원','진료','수술','퇴원','기침','열이']},
+  {key:'fall',       label:'낙상·거동',       hint:'넘어짐, 어지럼, 계단·화장실·외출 어려움',
+   kw:['넘어지','낙상','어지럼','계단','화장실','거동','휘청','주저앉']},
+  {key:'medication', label:'복약·의료이용',    hint:'복약 누락·중복 의심, 예약 누락, 비용·이동 장벽',
+   kw:['약','복약','투약','처방','약값','병원비','예약']},
+  {key:'cognition',  label:'인지·의사소통',    hint:'단기기억·계산·시간장소 혼동, 화기관리 어려움',
+   kw:['깜빡','기억','헷갈','날짜','가스','불 끄','혼동','치매','또 물어']},
+  {key:'emotion',    label:'정서·고립',       hint:'우울표현, 흥미 저하, 자살 암시, 가족·이웃 단절',
+   kw:['우울','기분','외롭','쓸쓸','의욕','흥미','눈물','의미가 없','없어지고 싶','자살','자해','죽고 싶']},
+  {key:'hygiene',    label:'위생·일상생활',    hint:'목욕·청소·세탁·장보기·금전관리 어려움',
+   kw:['목욕','청소','빨래','세탁','장보기','금전','정리','씻']},
+  {key:'housing',    label:'주거·안전·경제',   hint:'화재·냉난방·누수·공과금·병원비·학대 의심',
+   kw:['보일러','난방','냉방','누수','공과금','화재','전기','가스비','월세','학대','폭력','때리','전기세']},
+];
+const DOMAIN_MAP = Object.fromEntries(DOMAINS.map(d=>[d.key,d]));
+
+const NEG_WORDS = ['없','못','안 ','않','어렵','힘들','감소','악화','불편','깜빡','잊','넘어지','어지럼','누락','중단','거부','싫다','부족','악해','저하','곤란','장벽','의심','미룸','미루'];
+const POS_WORDS = ['잘','좋아','정상','괜찮','문제 없','이상 없','잘 지내','잘 드심','잘 드셨','잘 주무','잘 챙'];
+const EMERGENCY_WORDS = ['자살','자해','없어지고 싶','의미가 없','죽고 싶','화재','불이 나','의식이','쓰러지','학대','폭력','때리','숨을 못'];
+const TIME_WORDS = [
+  {kw:'어제', label:'어제'},{kw:'오늘', label:'오늘'},{kw:'이번 주', label:'이번 주'},{kw:'이번주', label:'이번 주'},
+  {kw:'지난주', label:'지난주'},{kw:'지난 주', label:'지난주'},{kw:'요즘', label:'요즘'},{kw:'최근', label:'최근'},{kw:'며칠', label:'며칠 전'},
+];
+
+const URGENCY = {
+  '긴급확인':   {order:0, chip:'danger',  deadline:'즉시'},
+  '당일확인':   {order:1, chip:'warn',    deadline:'업무일 내'},
+  '연계검토':   {order:2, chip:'info',    deadline:'정해진 기한'},
+  '추적관찰':   {order:3, chip:'neutral', deadline:'다음 일정'},
+  '특이신호없음':{order:4, chip:'good',   deadline:'정기 일정'},
+};
+const LIFECYCLE_LABEL = {
+  '신규':'neutral','확인대기':'warn','검토완료':'info','조치중':'amber','연계중':'info','추적중':'neutral','종결':'good','재개':'danger'
+};
+const REFERRAL_LABEL = {
+  '검토후보':'neutral','동의':'info','문의':'info','접수':'warn','대기':'warn','거절':'danger','자격미충족':'danger','완료':'good'
+};
+const BASELINE_LABEL = {'정상':'good','어려움':'warn','미확인':'neutral'};
+
+const QUESTIONS_REGULAR = [
+  '요즘 식사는 하루 몇 끼 정도 드시나요?','수면은 잘 취하고 계신가요?','요즘 불편하거나 아픈 곳이 있으신가요?',
+  '드시는 약은 거르지 않고 챙기고 계신가요?','최근 넘어지거나 어지러운 적 있으셨나요?','요 며칠 밖에 나가신 적 있으신가요?','요즘 기분은 어떠신가요?',
+];
+const QUESTIONS_SITUATION = [
+  {tag:'폭염', q:'냉방기구는 잘 작동하시나요? 물은 충분히 드시고 계신가요?'},
+  {tag:'한파', q:'난방은 잘 되고 계신가요? 외출 시 방한은 어떻게 하고 계신가요?'},
+  {tag:'퇴원', q:'퇴원 후 처방받은 약과 통원 일정은 잘 지키고 계신가요?'},
+];
+
+/* 정책·기관 DB (부록 B 구조, 공식 출처는 문서 부록 C 참고자료 기반) */
+const POLICY_SEED = [
+  {id:'P-01', name:'노인맞춤돌봄서비스 (특화서비스)', org:'수행기관 · 읍면동', region:'전남 광주 전역', domains:['emotion','contact','hygiene'],
+   cond:'만 65세 이상 독거·조손·고령부부 등 돌봄필요군', apply:'읍면동 접수 → 수행기관 사정 → 서비스 연계', contact:'관할 읍면동 행정복지센터', source:'보건복지부 2026년 노인맞춤돌봄서비스 사업안내', date:'2026-08-24'},
+  {id:'P-02', name:'지역사회 통합돌봄 창구', org:'시군구 통합돌봄창구', region:'전남 광주 전역', domains:['housing','hygiene','medication','contact'],
+   cond:'복합욕구·퇴원 후 돌봄 공백이 있는 주민', apply:'읍면동·시군구 신청 → 조사 → 개인지원계획 수립', contact:'관할 시군구 통합돌봄창구', source:'보건복지부 지역사회 통합돌봄 한눈에 보기', date:'2026-08-24'},
+  {id:'P-03', name:'정신건강복지센터 상담', org:'지역 정신건강복지센터', region:'전남 광주 전역', domains:['emotion'],
+   cond:'우울·고립·정서적 어려움을 겪는 주민 (제한 없음)', apply:'센터 direct 상담 신청 또는 담당자 의뢰', contact:'국가정신건강정보포털 안내', source:'국가정신건강정보포털', date:'2026-08-24'},
+  {id:'P-04', name:'자살예방상담전화 109', org:'보건복지상담센터', region:'전국', domains:['emotion'],
+   cond:'자살·자해 위기 표현이 있는 경우 (24시간)', apply:'즉시 전화 연결, 별도 신청 불요', contact:'109 (24시간)', source:'보건복지상담센터 109', date:'2026-08-24'},
+  {id:'P-05', name:'치매안심센터 선별검사', org:'관할 치매안심센터', region:'전남 광주 전역', domains:['cognition'],
+   cond:'인지저하 의심 소견이 있는 60세 이상', apply:'센터 방문·전화 예약 후 선별검사', contact:'관할 보건소 치매안심센터', source:'보건복지부 정책 안내', date:'2026-08-24'},
+  {id:'P-06', name:'보건소 방문건강관리', org:'관할 보건소', region:'전남 광주 전역', domains:['medication','pain'],
+   cond:'복약관리·만성질환 관리가 필요한 주민', apply:'보건소 등록 후 방문간호 연계', contact:'관할 보건소', source:'보건복지부 정책 안내', date:'2026-08-24'},
+  {id:'P-07', name:'장기요양 등급 재사정', org:'국민건강보험공단', region:'전국', domains:['fall','hygiene','nutrition'],
+   cond:'일상생활 기능저하가 지속되는 65세 이상', apply:'공단 신청 → 등급판정 → 서비스 연계', contact:'국민건강보험공단', source:'보건복지부 정책 안내', date:'2026-08-24'},
+  {id:'P-08', name:'긴급복지지원 (129)', org:'읍면동 행정복지센터', region:'전남 광주 전역', domains:['housing'],
+   cond:'공과금·병원비 등 위기상황에 처한 가구', apply:'읍면동 신청 또는 129 상담 후 연계', contact:'129 (24시간) / 관할 읍면동', source:'보건복지상담센터 129', date:'2026-08-24'},
+  {id:'P-09', name:'독거노인 응급안전안심서비스', org:'수행기관', region:'전남 광주 전역', domains:['fall','housing','contact'],
+   cond:'화재·활동량·응급호출 감지 장비가 필요한 독거 어르신', apply:'수행기관 신청 → 장비 설치 대상 여부 검토', contact:'관할 수행기관', source:'보건복지부 응급안전안심서비스 안내', date:'2026-08-24'},
+  {id:'P-10', name:'노인보호전문기관 (1577-1389)', org:'중앙노인보호전문기관', region:'전국', domains:['housing','emotion'],
+   cond:'학대·방임이 의심되는 경우 (즉시 대응)', apply:'1577-1389 또는 112 즉시 신고', contact:'1577-1389 (24시간)', source:'중앙노인보호전문기관', date:'2026-08-24'},
+];
+
+/* ============================================================
+   유틸리티
+   ============================================================ */
+function uid(p){ return p+'-'+Math.random().toString(36).slice(2,7).toUpperCase(); }
+function isoDaysFromNow(n){ const d=new Date(); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); }
+function isoDaysAgo(n){ return isoDaysFromNow(-n); }
+function fmtDate(iso){ if(!iso) return '-'; try{ return new Date(iso+'T00:00:00').toLocaleDateString('ko-KR',{year:'numeric',month:'2-digit',day:'2-digit'}); }catch(e){return iso;} }
+function fmtDateTime(iso){ if(!iso) return '-'; try{ return new Date(iso).toLocaleDateString('ko-KR',{year:'numeric',month:'2-digit',day:'2-digit'})+' '+new Date(iso).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}); }catch(e){return iso;} }
+function daysUntil(iso){ if(!iso) return null; const d=new Date(iso+'T00:00:00'); const t=new Date(); t.setHours(0,0,0,0); return Math.round((d-t)/86400000); }
+function includesAny(text, arr){ return arr.some(w=>text.includes(w)); }
+
+/* 메모를 10개 영역으로 구조화하는 규칙기반 분석 엔진 (실제 AI 호출 대신 데모용 키워드 매칭) */
+function analyzeMemo(memo, baseline){
+  const text = memo || '';
+  const rows = DOMAINS.map(d=>{
+    const hit = d.kw.find(k=>text.includes(k));
+    if(!hit){
+      return {domain:d.key,label:d.label,status:'미확인',content:'이번 통화·방문에서 확인되지 않음',time:'-',excerpt:'원문 없음'};
+    }
+    const idx = text.indexOf(hit);
+    const start = Math.max(0, idx-9);
+    const end = Math.min(text.length, idx+hit.length+9);
+    const excerpt = text.slice(start,end).trim();
+    const neg = includesAny(text, NEG_WORDS);
+    const pos = includesAny(text, POS_WORDS);
+    const timeHit = TIME_WORDS.find(t=>text.includes(t.kw));
+    const time = timeHit ? timeHit.label : '최근';
+    let status = '미확인';
+    let content = d.label+' 관련 언급';
+    if(neg && !pos){ status='이상'; content=d.label+' 어려움 관찰'; }
+    else if(pos && !neg){ status='정상'; content=d.label+' 양호'; }
+    else if(neg && pos){ status='이상'; content=d.label+' 부분적 어려움'; }
+    else { status='이상'; content=d.label+' 변화 언급'; }
+    return {domain:d.key,label:d.label,status,content,time,excerpt};
+  });
+  const emergency = includesAny(text, EMERGENCY_WORDS);
+  return {rows, emergency};
+}
+
+function classifyChange(domainKey, currentStatus, baseline, priorSignalsForClient){
+  const baseVal = baseline ? baseline.domains[domainKey] : '미확인';
+  const priorForDomain = priorSignalsForClient.filter(s=>s.domain===domainKey);
+  const lastPrior = priorForDomain[priorForDomain.length-1];
+  if(currentStatus==='이상'){
+    if(!lastPrior || lastPrior.currentStatus!=='이상'){
+      return baseVal==='어려움' ? '반복' : '신규';
+    }
+    const consecutive = priorForDomain.filter(s=>s.currentStatus==='이상').length;
+    return consecutive>=2 ? '악화' : '반복';
+  }
+  if(currentStatus==='정상' && lastPrior && lastPrior.currentStatus==='이상'){ return '호전'; }
+  return '-';
+}
+
+function suggestUrgency(rows, emergency){
+  if(emergency) return '긴급확인';
+  const abnormal = rows.filter(r=>r.status==='이상');
+  const todayDomains = ['medication','fall','nutrition','cognition','pain'];
+  const referralDomains = ['emotion','housing','hygiene'];
+  if(abnormal.some(r=>todayDomains.includes(r.domain) && (r.changeType==='신규'||r.changeType==='악화'))) return '당일확인';
+  if(abnormal.some(r=>referralDomains.includes(r.domain))) return '연계검토';
+  if(abnormal.length>0) return '추적관찰';
+  return '특이신호없음';
+}
+
+/* ============================================================
+   초기 시연 데이터 (가상 인물 · 더미데이터, 실사용자 아님)
+   ============================================================ */
+function emptyBaseline(clientId, approvedBy){
+  const domains = {}; DOMAINS.forEach(d=>domains[d.key]='미확인');
+  return {id:uid('BL'), clientId, version:1, date:isoDaysAgo(30), approvedBy, domains, note:'초기 등록'};
+}
+
+function buildSeed(){
+  const clients = [
+    {id:'C-1', caseNo:'2026-A04-001', alias:'은행나무 어르신', birthYear:1944, gender:'여', region:'광주 서구', manager:'생활지원사 정○○',
+     contactPref:'전화', contactHours:'오전 9시~11시', emergencyContact:'있음(자녀)', consents:{ai:true,agency:true,relative:false},
+     registeredAt: isoDaysAgo(40), completeness:100, dupChecked:true, status:'등록완료'},
+    {id:'C-2', caseNo:'2026-A04-002', alias:'소나무 어르신', birthYear:1951, gender:'남', region:'광주 남구', manager:'생활지원사 정○○',
+     contactPref:'전화', contactHours:'오후 2시~4시', emergencyContact:'있음(이웃)', consents:{ai:true,agency:true,relative:true},
+     registeredAt: isoDaysAgo(25), completeness:100, dupChecked:true, status:'등록완료'},
+    {id:'C-3', caseNo:'2026-A04-003', alias:'감나무 어르신', birthYear:1939, gender:'여', region:'광주 북구', manager:'생활지원사 박○○',
+     contactPref:'전화', contactHours:'오전 10시~12시', emergencyContact:'없음', consents:{ai:true,agency:false,relative:false},
+     registeredAt: isoDaysAgo(12), completeness:100, dupChecked:true, status:'등록완료'},
+  ];
+
+  const baselines = [
+    (()=>{ const b=emptyBaseline('C-1','전담사회복지사 이○○'); DOMAINS.forEach(d=>b.domains[d.key]='정상'); b.date=isoDaysAgo(40); return b; })(),
+    (()=>{ const b=emptyBaseline('C-2','전담사회복지사 이○○'); DOMAINS.forEach(d=>b.domains[d.key]='정상'); b.domains.emotion='미확인'; b.date=isoDaysAgo(25); return b; })(),
+    (()=>{ const b=emptyBaseline('C-3','전담사회복지사 이○○'); DOMAINS.forEach(d=>b.domains[d.key]='정상'); b.date=isoDaysAgo(12); return b; })(),
+  ];
+
+  const records = [];
+  const signals = [];
+  const referrals = [];
+  const audit = [];
+
+  function pushLog(actor, action, detail){
+    audit.push({id:uid('LOG'), at:new Date(Date.now()-Math.random()*60000).toISOString(), actor, action, detail});
+  }
+
+  /* --- 시나리오 A: 은행나무 어르신 — 반복되는 작은 변화 (문서 6.5 예시 + 14장 시나리오A) --- */
+  function addRecord(clientId, dt, method, memo, priorList){
+    const rec = {id:uid('REC'), clientId, datetime:dt, method, statement:memo, observation: method==='방문' ? '평소보다 말수가 적고 방 안 정리가 덜 되어 있음' : '', memo, nextCheckDate:isoDaysFromNow(3), createdBy:'생활지원사 정○○'};
+    records.push(rec);
+    const baseline = baselines.find(b=>b.clientId===clientId);
+    const priorSignalsForClient = signals.filter(s=>s.clientId===clientId);
+    const {rows, emergency} = analyzeMemo(memo, baseline);
+    rows.forEach(r=>{ r.changeType = classifyChange(r.domain, r.status, baseline, priorSignalsForClient.filter(s=>s.recordId!==rec.id)); });
+    const urgency = suggestUrgency(rows, emergency);
+    rows.forEach(r=>{
+      if(r.status==='이상' || (r.changeType && r.changeType!=='-')){
+        signals.push({
+          id:uid('SIG'), clientId, recordId:rec.id, domain:r.domain, label:r.label, currentStatus:r.status,
+          excerpt:r.excerpt, time:r.time, changeType:r.changeType, urgency,
+          lifecycle:'검토완료', reviewedBy:'전담사회복지사 이○○', reviewNote:'AI 제안 확인 후 원문 근거로 승인',
+          createdAt:dt, deadline: urgency==='긴급확인' ? '즉시' : urgency==='당일확인' ? isoDaysFromNow(0) : urgency==='연계검토' ? isoDaysFromNow(7) : rec.nextCheckDate,
+          history:[{at:dt, note:'AI 구조화 + 담당자 승인'}],
+        });
+      }
+    });
+    pushLog('생활지원사 정○○','안부기록 저장', method+' 상담, 대상자 '+clientId);
+    return {rec, rows, urgency};
+  }
+
+  addRecord('C-1', isoDaysAgo(9)+'T09:20:00', '전화', '요즘 입맛이 조금 없다고 하셨음. 그 외 특이사항 없음.');
+  addRecord('C-1', isoDaysAgo(5)+'T09:40:00', '전화', '죽만 조금 드셨다고 함. 어제부터 입맛이 없어서 죽만 조금 드셨고, 약은 아침에 깜빡했다고 함.');
+  addRecord('C-1', isoDaysAgo(1)+'T10:05:00', '방문', '전에는 경로당에 갔지만 이번 주는 한 번도 나가지 않았다고 함. 어지러워서 나가지 않았다고 하심. 식사량도 계속 줄어든 상태.');
+
+  /* --- 시나리오 B: 소나무 어르신 — 긴급 표현 --- */
+  addRecord('C-2', isoDaysAgo(20)+'T14:10:00', '전화', '특이사항 없음. 식사 잘 하시고 잠도 잘 주무신다고 함.');
+  const b = addRecord('C-2', isoDaysAgo(2)+'T14:30:00', '전화', '사는 게 의미가 없고 없어지고 싶다는 말씀을 하심. 최근 부인과 사별 후 많이 외로워하심.');
+  const sigEmergency = signals.find(s=>s.clientId==='C-2' && s.domain==='emotion');
+  if(sigEmergency){
+    sigEmergency.lifecycle='조치중';
+    sigEmergency.reviewNote='자살 암시 표현으로 규칙 기반 즉시 알림. 전담사회복지사가 즉시 재연락하여 상태 확인, 109 안내 및 방문 예정.';
+    pushLog('전담사회복지사 이○○','긴급 신호 즉시 확인','109/정신건강복지센터 안내, 재연락 완료');
+    referrals.push({id:uid('REF'), clientId:'C-2', signalId:sigEmergency.id, policyId:'P-04', reason:'자살 암시 표현 확인, 24시간 상담채널 우선 연결',
+      status:'접수', consentDate:isoDaysAgo(2), nextReviewDate:isoDaysFromNow(1), outcome:'', history:[{at:isoDaysAgo(2)+'T15:00:00', note:'109 안내 및 정신건강복지센터 연계 접수'}]});
+    referrals.push({id:uid('REF'), clientId:'C-2', signalId:sigEmergency.id, policyId:'P-03', reason:'우울·고립 정서 지원을 위한 지역센터 상담 연계',
+      status:'대기', consentDate:isoDaysAgo(2), nextReviewDate:isoDaysFromNow(2), outcome:'', history:[{at:isoDaysAgo(1)+'T11:00:00', note:'센터 상담 일정 조율 중'}]});
+  }
+
+  /* --- 시나리오 C: 감나무 어르신 — 오탐과 경고 종결 --- */
+  addRecord('C-3', isoDaysAgo(8)+'T11:00:00', '전화', '식사 잘 하시고 큰 불편 없으시다고 함.');
+  addRecord('C-3', isoDaysAgo(1)+'T11:15:00', '전화', '전화를 못 받았다는 기록. 재통화 결과 병원 진료 중이어서 통화를 못 받은 것으로 확인됨.');
+  const sigFalse = signals.find(s=>s.clientId==='C-3' && s.domain==='contact');
+  if(sigFalse){
+    sigFalse.lifecycle='종결';
+    sigFalse.urgency='특이신호없음';
+    sigFalse.reviewNote='오탐·정상 일정으로 종결. 병원 진료로 인한 일시적 미응답 확인.';
+    sigFalse.reviewedBy='전담사회복지사 이○○';
+    sigFalse.history.push({at:isoDaysAgo(0)+'T09:00:00', note:'오탐 확인 후 종결 처리 (사유: 병원 진료 중 미응답)'});
+    pushLog('전담사회복지사 이○○','경고 종결(오탐)','연락 위험 후보 - 병원 진료로 확인, 정상 일정 처리');
+  }
+
+  return {clients, baselines, records, signals, referrals, policies: POLICY_SEED.slice(), audit, seededAt:new Date().toISOString()};
+}
+
+const STORAGE_KEY = 'ongicheck-mvp-state-v1';
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw) return JSON.parse(raw);
+  }catch(e){}
+  const seed = buildSeed();
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(seed)); }catch(e){}
+  return seed;
+}
+function saveState(state){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){}
+}
+
+/* ============================================================
+   공용 소형 컴포넌트
+   ============================================================ */
+function Badge({tone, children}){
+  return <span className={"badge badge--"+tone}><span className="dot"></span>{children}</span>;
+}
+function UrgencyBadge({level}){
+  const t = URGENCY[level] ? URGENCY[level].chip : 'neutral';
+  return <Badge tone={t}>{level}</Badge>;
+}
+function LifecycleBadge({state}){
+  return <Badge tone={LIFECYCLE_LABEL[state]||'neutral'}>{state}</Badge>;
+}
+function ReferralBadge({state}){
+  return <Badge tone={REFERRAL_LABEL[state]||'neutral'}>{state}</Badge>;
+}
+function BaselineBadge({v}){
+  return <Badge tone={BASELINE_LABEL[v]||'neutral'}>{v}</Badge>;
+}
+function Empty({children}){
+  return <div className="empty">{children}</div>;
+}
+
+/* ============================================================
+   사이드바 / 상단바
+   ============================================================ */
+const NAV_ITEMS = [
+  {key:'dashboard', label:'오늘의 업무', ico:'☀'},
+  {key:'clients', label:'대상자 목록', ico:'☰'},
+  {key:'priority', label:'우선확인 대시보드', ico:'◎'},
+  {key:'policies', label:'정책·기관 DB', ico:'⚑'},
+  {key:'admin', label:'관리자 통계', ico:'▤'},
+];
+
+function Sidebar({nav, setNav, role, setRole}){
+  return (
+    <div className="sidebar">
+      <div className="brand">
+        <span className="brand-mark">잘한다잘한다</span>
+        <span className="brand-sub">A-04 고령층 돌봄 MVP</span>
+      </div>
+      <div className="role-switch">
+        <label>현재 역할</label>
+        <select value={role} onChange={e=>setRole(e.target.value)}>
+          <option>생활지원사</option>
+          <option>전담사회복지사</option>
+          <option>기관관리자</option>
+        </select>
+      </div>
+      <div className="nav">
+        {NAV_ITEMS.map(it=>(
+          <button key={it.key} className={"nav-item"+(nav.screen===it.key?' active':'')} onClick={()=>setNav({screen:it.key})}>
+            <span className="nav-ico">{it.ico}</span>{it.label}
+          </button>
+        ))}
+      </div>
+      <div className="sidebar-foot">
+        2026 전남광주 청년 AI 솔버톤<br/>잘한다잘한다 · v1.2 기획 기반<br/>가상 인물·더미데이터 시연용
+      </div>
+    </div>
+  );
+}
+
+function TopBar({title, crumb, onSearch, query}){
+  return (
+    <div className="topbar">
+      <div className="topbar-title">
+        <h1>{title}</h1>
+        <div className="topbar-crumb">{crumb}</div>
+      </div>
+      {onSearch && <input className="search-input" placeholder="이름·사례번호로 검색" value={query} onChange={e=>onSearch(e.target.value)} />}
+    </div>
+  );
+}
+
+function Disclaimer(){
+  return <div className="disclaimer">이 화면은 2026 전남광주 청년 AI 솔버톤 제출용 MVP 시연입니다. 모든 인물·기록은 가상의 더미데이터이며, 위험신호 분석은 규칙 기반 데모 로직으로 실제 의료진단·공식 대상자 선정·위기대응 지침을 대체하지 않습니다.</div>;
+}
+
+/* ============================================================
+   화면 1. 오늘의 업무 (대시보드)
+   ============================================================ */
+function Dashboard({state, setNav, role}){
+  const openSignals = state.signals.filter(s=>!['종결'].includes(s.lifecycle));
+  const urgent = openSignals.filter(s=>s.urgency==='긴급확인');
+  const today = openSignals.filter(s=>s.urgency==='당일확인');
+  const overdue = openSignals.filter(s=>{
+    if(s.deadline==='즉시') return s.lifecycle==='신규';
+    const du = daysUntil(s.deadline);
+    return du!==null && du<0;
+  });
+  const upcoming = state.records
+    .map(r=>({rec:r, client:state.clients.find(c=>c.id===r.clientId)}))
+    .filter(x=>x.client)
+    .sort((a,b)=> (a.rec.nextCheckDate||'').localeCompare(b.rec.nextCheckDate||''))
+    .slice(0,6);
+
+  function Row({s}){
+    const c = state.clients.find(cl=>cl.id===s.clientId);
+    if(!c) return null;
+    return (
+      <tr className="clickable" onClick={()=>setNav({screen:'signal', params:{id:s.id}})}>
+        <td>{c.alias}<div className="small">{c.caseNo}</div></td>
+        <td>{s.label}</td>
+        <td><UrgencyBadge level={s.urgency}/></td>
+        <td>{s.excerpt}</td>
+        <td>{s.deadline==='즉시'?'즉시':fmtDate(s.deadline)}</td>
+      </tr>
+    );
+  }
+
+  return (
+    <div>
+      <Disclaimer/>
+      <div className="stat-grid" style={{marginBottom:24}}>
+        <div className="stat-tile"><div className="stat-num mono" style={{color:'var(--danger)'}}>{urgent.length}</div><div className="stat-label">긴급 확인</div></div>
+        <div className="stat-tile"><div className="stat-num mono" style={{color:'var(--warn)'}}>{today.length}</div><div className="stat-label">당일 확인</div></div>
+        <div className="stat-tile"><div className="stat-num mono" style={{color:'var(--danger)'}}>{overdue.length}</div><div className="stat-label">처리기한 초과</div></div>
+        <div className="stat-tile"><div className="stat-num mono">{state.clients.length}</div><div className="stat-label">담당 대상자</div></div>
+      </div>
+
+      <div className="section-head">
+        <h2>오늘 먼저 확인할 신호</h2>
+        <button className="btn btn--primary" onClick={()=>setNav({screen:'newClient'})}>+ 신규 대상자 등록</button>
+      </div>
+      {urgent.length+today.length+overdue.length===0 ? (
+        <Empty>긴급·당일·기한초과 신호가 없습니다. 대상자 목록에서 안부 확인을 진행해 보세요.</Empty>
+      ) : (
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>대상자</th><th>위험영역</th><th>단계</th><th>발견 근거</th><th>처리기한</th></tr></thead>
+            <tbody>
+              {[...urgent,...today,...overdue.filter(s=>!urgent.includes(s)&&!today.includes(s))].map(s=><Row key={s.id} s={s}/>)}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <div className="section-head"><h2>다가오는 확인 일정</h2></div>
+      <div className="table-wrap">
+        <table>
+          <thead><tr><th>대상자</th><th>최근 접촉</th><th>방식</th><th>다음 확인일</th><th></th></tr></thead>
+          <tbody>
+            {upcoming.map(x=>(
+              <tr key={x.rec.id} className="clickable" onClick={()=>setNav({screen:'client', params:{id:x.client.id}})}>
+                <td>{x.client.alias}</td>
+                <td>{fmtDateTime(x.rec.datetime)}</td>
+                <td>{x.rec.method}</td>
+                <td>{fmtDate(x.rec.nextCheckDate)} <span className="small">({daysUntil(x.rec.nextCheckDate)}일 후)</span></td>
+                <td><button className="btn btn--sm" onClick={e=>{e.stopPropagation(); setNav({screen:'checkin', params:{clientId:x.client.id}});}}>안부확인 시작</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   화면 2. 대상자 목록
+   ============================================================ */
+function ClientList({state, setNav, query}){
+  const q = (query||'').trim();
+  const filtered = state.clients.filter(c=>!q || c.alias.includes(q) || c.caseNo.includes(q));
+  return (
+    <div>
+      <div className="section-head">
+        <h2>대상자 목록</h2>
+        <span className="count">{filtered.length}명</span>
+      </div>
+      <div className="table-wrap">
+        <table>
+          <thead><tr><th>대상자</th><th>사례번호</th><th>지역</th><th>담당자</th><th>최근 신호</th><th>등록일</th></tr></thead>
+          <tbody>
+            {filtered.map(c=>{
+              const sigs = state.signals.filter(s=>s.clientId===c.id && s.lifecycle!=='종결');
+              const worst = sigs.sort((a,b)=>URGENCY[a.urgency].order-URGENCY[b.urgency].order)[0];
+              return (
+                <tr key={c.id} className="clickable" onClick={()=>setNav({screen:'client', params:{id:c.id}})}>
+                  <td>{c.alias}</td>
+                  <td className="mono">{c.caseNo}</td>
+                  <td>{c.region}</td>
+                  <td>{c.manager}</td>
+                  <td>{worst ? <UrgencyBadge level={worst.urgency}/> : <Badge tone="good">특이신호없음</Badge>}</td>
+                  <td>{fmtDate(c.registeredAt)}</td>
+                </tr>
+              );
+            })}
+            {filtered.length===0 && <tr><td colSpan="6"><Empty>검색 결과가 없습니다.</Empty></td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   화면 3. 신규 대상자 등록 마법사
+   ============================================================ */
+function NewClientWizard({state, setState, setNav}){
+  const [step, setStep] = useState(0);
+  const steps = ['중복 확인','기본정보','연락 설정','동의','완료'];
+  const [dupQuery, setDupQuery] = useState({name:'', birthYear:'', phoneTail:'', region:''});
+  const [checkedDup, setCheckedDup] = useState(false);
+  const [form, setForm] = useState({alias:'', birthYear:'', gender:'여', region:'', manager:'', caseNo: uid('2026-A04')});
+  const [contact, setContact] = useState({contactPref:'전화', contactHours:'', emergencyContact:'없음'});
+  const [consents, setConsents] = useState({ai:false, agency:false, relative:false});
+
+  const dupCandidates = state.clients.filter(c=>{
+    if(!dupQuery.name && !dupQuery.birthYear && !dupQuery.phoneTail) return false;
+    const nameHit = dupQuery.name && c.alias.includes(dupQuery.name);
+    const yearHit = dupQuery.birthYear && String(c.birthYear)===dupQuery.birthYear;
+    return nameHit || yearHit;
+  });
+
+  function finish(){
+    const newClient = {
+      id: uid('C'), caseNo: form.caseNo, alias: form.alias || '무명 어르신', birthYear: Number(form.birthYear)||0,
+      gender: form.gender, region: form.region || '미입력', manager: form.manager || '미배정',
+      contactPref: contact.contactPref, contactHours: contact.contactHours, emergencyContact: contact.emergencyContact,
+      consents, registeredAt: isoDaysAgo(0), completeness: 100, dupChecked:true, status:'등록완료',
+    };
+    const newBaseline = emptyBaseline(newClient.id, '전담사회복지사 이○○');
+    setState(s=>({...s, clients:[...s.clients, newClient], baselines:[...s.baselines, newBaseline],
+      audit:[...s.audit, {id:uid('LOG'), at:new Date().toISOString(), actor:'생활지원사', action:'신규 대상자 등록', detail:newClient.caseNo}]}));
+    setNav({screen:'baseline', params:{clientId:newClient.id, isNew:true}});
+  }
+
+  return (
+    <div>
+      <div className="section-head"><h2>신규 대상자 등록</h2></div>
+      <div className="stepper">
+        {steps.map((s,i)=>(<span key={s} className={"step"+(i===step?' active':i<step?' done':'')}>{i+1}. {s}</span>))}
+      </div>
+
+      {step===0 && (
+        <div className="card" style={{maxWidth:640}}>
+          <p className="small" style={{marginBottom:12}}>중복 등록으로 과거 기록과 담당이 분리되지 않도록, 완전 일치가 아닌 유사 후보를 먼저 확인합니다.</p>
+          <div className="form-grid">
+            <div className="field"><label>가명 또는 이름</label><input type="text" value={dupQuery.name} onChange={e=>setDupQuery({...dupQuery,name:e.target.value})}/></div>
+            <div className="field"><label>출생연도</label><input type="text" placeholder="예: 1944" value={dupQuery.birthYear} onChange={e=>setDupQuery({...dupQuery,birthYear:e.target.value})}/></div>
+            <div className="field"><label>전화번호 뒤 4자리</label><input type="text" value={dupQuery.phoneTail} onChange={e=>setDupQuery({...dupQuery,phoneTail:e.target.value})}/></div>
+            <div className="field"><label>담당 지역</label><input type="text" value={dupQuery.region} onChange={e=>setDupQuery({...dupQuery,region:e.target.value})}/></div>
+          </div>
+          <hr className="rule"/>
+          {dupCandidates.length>0 ? (
+            <div>
+              <p className="small">유사한 기존 대상자가 있습니다. 동일인이면 기존 프로필을 열어주세요.</p>
+              {dupCandidates.map(c=>(
+                <div key={c.id} className="kv"><span>{c.alias} · {c.birthYear}년생 · {c.region}</span>
+                  <button className="btn btn--sm" onClick={()=>setNav({screen:'client', params:{id:c.id}})}>기존 프로필 열기</button></div>
+              ))}
+            </div>
+          ) : <p className="small">유사 후보가 없습니다. 새로 등록을 진행할 수 있습니다.</p>}
+          <div style={{marginTop:14, display:'flex', justifyContent:'flex-end', gap:8}}>
+            <button className="btn btn--primary" onClick={()=>{setCheckedDup(true); setStep(1);}}>중복 없음 · 다음</button>
+          </div>
+        </div>
+      )}
+
+      {step===1 && (
+        <div className="card" style={{maxWidth:640}}>
+          <div className="form-grid">
+            <div className="field"><label>사례번호</label><input type="text" className="mono" value={form.caseNo} readOnly/></div>
+            <div className="field"><label>가명</label><input type="text" placeholder="예: 은행나무 어르신" value={form.alias} onChange={e=>setForm({...form,alias:e.target.value})}/></div>
+            <div className="field"><label>출생연도</label><input type="text" value={form.birthYear} onChange={e=>setForm({...form,birthYear:e.target.value})}/></div>
+            <div className="field"><label>성별</label>
+              <select value={form.gender} onChange={e=>setForm({...form,gender:e.target.value})}><option>여</option><option>남</option></select>
+            </div>
+            <div className="field"><label>최소 위치정보(지역)</label><input type="text" placeholder="예: 광주 서구" value={form.region} onChange={e=>setForm({...form,region:e.target.value})}/></div>
+            <div className="field"><label>담당자</label><input type="text" value={form.manager} onChange={e=>setForm({...form,manager:e.target.value})}/></div>
+          </div>
+          <p className="small" style={{marginTop:10}}>주민번호 전체와 불필요한 가족사는 수집하지 않습니다.</p>
+          <div style={{marginTop:14, display:'flex', justifyContent:'space-between'}}>
+            <button className="btn" onClick={()=>setStep(0)}>이전</button>
+            <button className="btn btn--primary" onClick={()=>setStep(2)}>다음</button>
+          </div>
+        </div>
+      )}
+
+      {step===2 && (
+        <div className="card" style={{maxWidth:640}}>
+          <div className="form-grid">
+            <div className="field"><label>선호 연락방법</label>
+              <select value={contact.contactPref} onChange={e=>setContact({...contact,contactPref:e.target.value})}><option>전화</option><option>방문</option><option>전화·방문 병행</option></select>
+            </div>
+            <div className="field"><label>통화 가능 시간</label><input type="text" placeholder="예: 오전 9시~11시" value={contact.contactHours} onChange={e=>setContact({...contact,contactHours:e.target.value})}/></div>
+            <div className="field"><label>비상연락 가능 여부</label>
+              <select value={contact.emergencyContact} onChange={e=>setContact({...contact,emergencyContact:e.target.value})}><option>없음</option><option>있음(자녀)</option><option>있음(이웃)</option><option>있음(기타)</option></select>
+            </div>
+          </div>
+          <p className="small" style={{marginTop:10}}>비상연락처 등록이 보호자 자동 알림을 의미하지는 않습니다.</p>
+          <div style={{marginTop:14, display:'flex', justifyContent:'space-between'}}>
+            <button className="btn" onClick={()=>setStep(1)}>이전</button>
+            <button className="btn btn--primary" onClick={()=>setStep(3)}>다음</button>
+          </div>
+        </div>
+      )}
+
+      {step===3 && (
+        <div className="card" style={{maxWidth:640}}>
+          <p className="small" style={{marginBottom:10}}>목적별로 동의를 구분하여 저장하며, 연계 시점에 재확인하고 철회일을 관리합니다.</p>
+          <label className="checkline"><input type="checkbox" checked={consents.ai} onChange={e=>setConsents({...consents,ai:e.target.checked})}/> AI 분석(기록 구조화·변화 비교) 동의</label>
+          <label className="checkline"><input type="checkbox" checked={consents.agency} onChange={e=>setConsents({...consents,agency:e.target.checked})}/> 외부기관 연계(정책·서비스 의뢰) 동의</label>
+          <label className="checkline"><input type="checkbox" checked={consents.relative} onChange={e=>setConsents({...consents,relative:e.target.checked})}/> 관계인 연락(보호자·이웃) 동의</label>
+          <div style={{marginTop:14, display:'flex', justifyContent:'space-between'}}>
+            <button className="btn" onClick={()=>setStep(2)}>이전</button>
+            <button className="btn btn--primary" onClick={()=>setStep(4)}>다음</button>
+          </div>
+        </div>
+      )}
+
+      {step===4 && (
+        <div className="card" style={{maxWidth:640}}>
+          <h3 style={{marginBottom:10, fontSize:15}}>등록 내용 확인</h3>
+          <div className="kv"><span className="k">사례번호</span><span className="mono">{form.caseNo}</span></div>
+          <div className="kv"><span className="k">가명</span><span>{form.alias || '(미입력)'}</span></div>
+          <div className="kv"><span className="k">지역 · 담당자</span><span>{form.region || '(미입력)'} · {form.manager || '(미배정)'}</span></div>
+          <div className="kv"><span className="k">연락 설정</span><span>{contact.contactPref} · {contact.contactHours || '(미입력)'}</span></div>
+          <div className="kv"><span className="k">동의</span><span>{['ai','agency','relative'].filter(k=>consents[k]).length}/3 항목 동의</span></div>
+          <p className="small" style={{marginTop:10}}>완료 후 평소상태 등록으로 이어져, 이후 변화 비교의 기준값을 만듭니다.</p>
+          <div style={{marginTop:14, display:'flex', justifyContent:'space-between'}}>
+            <button className="btn" onClick={()=>setStep(3)}>이전</button>
+            <button className="btn btn--primary" onClick={finish}>등록 완료 · 평소상태 등록으로</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ============================================================
+   화면 4. 평소상태 등록/수정
+   ============================================================ */
+function BaselineForm({state, setState, setNav, clientId, isNew}){
+  const client = state.clients.find(c=>c.id===clientId);
+  const existing = state.baselines.find(b=>b.clientId===clientId);
+  const [domains, setDomains] = useState(existing ? {...existing.domains} : Object.fromEntries(DOMAINS.map(d=>[d.key,'미확인'])));
+  const [note, setNote] = useState('');
+
+  if(!client) return <Empty>대상자를 찾을 수 없습니다.</Empty>;
+
+  function save(){
+    setState(s=>{
+      const others = s.baselines.filter(b=>b.clientId!==clientId);
+      const prevVersion = existing ? existing.version+1 : 1;
+      return {...s, baselines:[...others, {id:uid('BL'), clientId, version:prevVersion, date:isoDaysAgo(0), approvedBy:'전담사회복지사 이○○', domains, note: note||'평소상태 갱신'}]};
+    });
+    if(isNew){ setNav({screen:'checkin', params:{clientId}}); }
+    else { setNav({screen:'client', params:{id:clientId}}); }
+  }
+
+  return (
+    <div>
+      <div className="section-head"><h2>{client.alias} · 평소상태 {existing?'수정':'초기 등록'}</h2></div>
+      <p className="small" style={{marginBottom:14}}>알 수 없는 항목은 정상으로 추정하지 않고 미확인으로 남깁니다. 이후 안부 기록과 비교되는 기준값입니다.</p>
+      <div className="domain-grid">
+        {DOMAINS.map(d=>(
+          <div className="domain-cell" key={d.key}>
+            <div className="dl">{d.label}</div>
+            <div className="seg">
+              {['정상','어려움','미확인'].map(v=>(
+                <button key={v} className={(domains[d.key]===v?'on':'')+(v==='어려움'?' bad':'')+(v==='미확인'?' unk':'')}
+                  onClick={()=>setDomains({...domains,[d.key]:v})}>{v}</button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="field" style={{marginTop:14, maxWidth:640}}>
+        <label>변경 사유 / 메모(선택)</label>
+        <textarea value={note} onChange={e=>setNote(e.target.value)} placeholder="예: 첫 상담 전 담당자 관찰 기반 초기 등록"/>
+      </div>
+      <div style={{marginTop:16, display:'flex', gap:8}}>
+        <button className="btn" onClick={()=>setNav({screen:'client', params:{id:clientId}})}>취소</button>
+        <button className="btn btn--primary" onClick={save}>{isNew? '저장하고 첫 상담으로' : '평소상태 저장'}</button>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   화면 5. 안부 확인 (질문추천 + 전화/방문 기록)
+   ============================================================ */
+function CheckinForm({state, setState, setNav, clientId}){
+  const client = state.clients.find(c=>c.id===clientId);
+  const baseline = state.baselines.find(b=>b.clientId===clientId);
+  const clientSignals = state.signals.filter(s=>s.clientId===clientId);
+  const [method, setMethod] = useState('전화');
+  const [statement, setStatement] = useState('');
+  const [observation, setObservation] = useState('');
+  const [nextDate, setNextDate] = useState(isoDaysFromNow(7));
+  const [askedTags, setAskedTags] = useState([]);
+  const [situationTag, setSituationTag] = useState(null);
+
+  if(!client) return <Empty>대상자를 찾을 수 없습니다.</Empty>;
+
+  const unconfirmed = baseline ? DOMAINS.filter(d=>baseline.domains[d.key]==='미확인') : [];
+  const openIssues = clientSignals.filter(s=>s.lifecycle!=='종결');
+  const recheckDomains = [...new Set(openIssues.map(s=>s.domain))].map(k=>DOMAIN_MAP[k]).filter(Boolean);
+
+  function toggleTag(q){
+    setAskedTags(t=> t.includes(q) ? t.filter(x=>x!==q) : [...t, q]);
+  }
+
+  function submit(){
+    const memoParts = [statement, observation].filter(Boolean).join(' ');
+    const rec = {id:uid('REC'), clientId, datetime:new Date().toISOString(), method, statement, observation, memo:memoParts, nextCheckDate:nextDate, createdBy:'생활지원사'};
+    setState(s=>({...s, records:[...s.records, rec],
+      audit:[...s.audit, {id:uid('LOG'), at:new Date().toISOString(), actor:'생활지원사', action:'안부기록 저장', detail:method+' · '+client.caseNo}]}));
+    setNav({screen:'analysis', params:{recordId:rec.id}});
+  }
+
+  return (
+    <div>
+      <div className="section-head"><h2>{client.alias} · 안부 확인</h2></div>
+
+      <div className="card" style={{marginBottom:16}}>
+        <div className="dl" style={{fontWeight:600, marginBottom:8, fontSize:13}}>추천 질문</div>
+        <div style={{marginBottom:8}} className="small">정기질문</div>
+        <div className="tag-row" style={{marginBottom:12}}>
+          {QUESTIONS_REGULAR.map(q=>(<span key={q} className={"tag"+(askedTags.includes(q)?'':' off')} onClick={()=>toggleTag(q)}>{q}</span>))}
+        </div>
+        {unconfirmed.length>0 && <>
+          <div style={{marginBottom:8}} className="small">미확인질문 (직전 기록에서 확인되지 않은 영역)</div>
+          <div className="tag-row" style={{marginBottom:12}}>
+            {unconfirmed.map(d=>(<span key={d.key} className={"tag"+(askedTags.includes(d.hint)?'':' off')} onClick={()=>toggleTag(d.hint)}>{d.label}: {d.hint}</span>))}
+          </div>
+        </>}
+        {recheckDomains.length>0 && <>
+          <div style={{marginBottom:8}} className="small">재확인질문 (이전 위험신호 지속 여부)</div>
+          <div className="tag-row" style={{marginBottom:12}}>
+            {recheckDomains.map(d=>(<span key={d.key} className={"tag"+(askedTags.includes('재확인:'+d.label)?'':' off')} onClick={()=>toggleTag('재확인:'+d.label)}>{d.label} 지속·호전·악화 확인</span>))}
+          </div>
+        </>}
+        <div style={{marginBottom:8}} className="small">상황질문 (선택)</div>
+        <div className="tag-row">
+          {QUESTIONS_SITUATION.map(s=>(<span key={s.tag} className={"tag"+(situationTag===s.tag?'':' off')} onClick={()=>setSituationTag(situationTag===s.tag?null:s.tag)}>{s.tag}: {s.q}</span>))}
+        </div>
+      </div>
+
+      <div className="card" style={{maxWidth:720}}>
+        <div className="field" style={{marginBottom:14}}>
+          <label>접촉 방식</label>
+          <div className="seg" style={{maxWidth:280}}>
+            <button className={method==='전화'?'on':''} onClick={()=>setMethod('전화')}>전화</button>
+            <button className={method==='방문'?'on':''} onClick={()=>setMethod('방문')}>방문</button>
+          </div>
+        </div>
+        <div className="field" style={{marginBottom:14}}>
+          <label>대상자 진술 <span className="hint">(전화·방문 공통 — 어르신이 실제로 말한 내용)</span></label>
+          <textarea value={statement} onChange={e=>setStatement(e.target.value)} placeholder="예: 어제부터 입맛이 없어서 죽만 조금 드셨고, 약은 아침에 깜빡했다고 함."/>
+        </div>
+        {method==='방문' && (
+          <div className="field" style={{marginBottom:14}}>
+            <label>담당자 관찰 <span className="hint">(방문 시에만 — 생활지원사가 직접 관찰한 사실)</span></label>
+            <textarea value={observation} onChange={e=>setObservation(e.target.value)} placeholder="예: 방 안 정리가 덜 되어 있고 평소보다 말수가 적음."/>
+          </div>
+        )}
+        <div className="field" style={{maxWidth:220}}>
+          <label>다음 확인일</label>
+          <input type="date" value={nextDate} onChange={e=>setNextDate(e.target.value)}/>
+        </div>
+        <div style={{marginTop:16, display:'flex', gap:8}}>
+          <button className="btn" onClick={()=>setNav({screen:'client', params:{id:clientId}})}>임시저장</button>
+          <button className="btn btn--primary" disabled={!statement && !observation} onClick={submit}>기록 저장 · AI 분석 보기</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   화면 6. AI 분석 검토
+   ============================================================ */
+function AnalysisReview({state, setState, setNav, recordId, role}){
+  const rec = state.records.find(r=>r.id===recordId);
+  if(!rec) return <Empty>기록을 찾을 수 없습니다.</Empty>;
+  const client = state.clients.find(c=>c.id===rec.clientId);
+  const baseline = state.baselines.find(b=>b.clientId===rec.clientId);
+  const priorSignalsForClient = state.signals.filter(s=>s.clientId===rec.clientId && s.recordId!==rec.id);
+
+  const [rows, setRows] = useState(()=>{
+    const {rows, emergency} = analyzeMemo(rec.memo, baseline);
+    const withChange = rows.map(r=>({...r, changeType: classifyChange(r.domain, r.status, baseline, priorSignalsForClient)}));
+    return withChange.map(r=>({...r, decision: r.status==='이상' ? '승인' : 'skip'}));
+  });
+  const emergency = includesAny(rec.memo||'', EMERGENCY_WORDS);
+  const [urgency, setUrgency] = useState(()=>suggestUrgency(rows, emergency));
+  const [note, setNote] = useState('');
+  const alreadySignaled = state.signals.some(s=>s.recordId===recordId);
+  const canApprove = role==='전담사회복지사';
+
+  function setDecision(domain, decision){
+    setRows(rs=>rs.map(r=>r.domain===domain?{...r,decision}:r));
+  }
+  function setStatus(domain, status){
+    setRows(rs=>rs.map(r=>r.domain===domain?{...r,status}:r));
+  }
+
+  function approve(){
+    const toCreate = rows.filter(r=>r.decision==='승인' && (r.status==='이상' || (r.changeType && r.changeType!=='-')));
+    const newSignals = toCreate.map(r=>({
+      id:uid('SIG'), clientId:rec.clientId, recordId:rec.id, domain:r.domain, label:r.label, currentStatus:r.status,
+      excerpt:r.excerpt, time:r.time, changeType:r.changeType, urgency,
+      lifecycle:'검토완료', reviewedBy:'전담사회복지사(현재 세션)', reviewNote: note || 'AI 제안 확인 후 승인',
+      createdAt:new Date().toISOString(),
+      deadline: urgency==='긴급확인' ? '즉시' : urgency==='당일확인' ? isoDaysFromNow(0) : urgency==='연계검토' ? isoDaysFromNow(7) : rec.nextCheckDate,
+      history:[{at:new Date().toISOString(), note:'담당자 승인: '+(note||'사유 미기재')}],
+    }));
+    setState(s=>({...s, signals:[...s.signals, ...newSignals],
+      audit:[...s.audit, {id:uid('LOG'), at:new Date().toISOString(), actor:'전담사회복지사', action:'AI 분석 검토·승인', detail:client.caseNo+' · '+newSignals.length+'건 신호 생성'}]}));
+    setNav({screen:'client', params:{id:rec.clientId}});
+  }
+
+  return (
+    <div>
+      <div className="section-head"><h2>{client ? client.alias : ''} · AI 분석 검토</h2></div>
+      {emergency && <div className="disclaimer" style={{background:'var(--danger-soft)', borderColor:'var(--danger)'}}>
+        ⚠ 긴급 표현이 감지되었습니다. 자살·자해·화재·학대 의심 등 표현은 규칙 기반으로 즉시 상향 알림됩니다. 담당자가 즉시 원문을 확인하세요.
+      </div>}
+      <div className="two-col">
+        <div className="card">
+          <div className="dl" style={{fontWeight:600, marginBottom:8, fontSize:13}}>원문 기록 <span className="small">({rec.method} · {fmtDateTime(rec.datetime)})</span></div>
+          {rec.statement && <div style={{marginBottom:10}}><div className="small" style={{marginBottom:4}}>대상자 진술</div><div className="pc-excerpt">{rec.statement}</div></div>}
+          {rec.observation && <div><div className="small" style={{marginBottom:4}}>담당자 관찰</div><div className="pc-excerpt">{rec.observation}</div></div>}
+          <hr className="rule"/>
+          <div className="field">
+            <label>제안 우선확인 단계</label>
+            <select value={urgency} onChange={e=>setUrgency(e.target.value)} disabled={!canApprove}>
+              {Object.keys(URGENCY).map(u=>(<option key={u} value={u}>{u}</option>))}
+            </select>
+          </div>
+          <div className="field" style={{marginTop:10}}>
+            <label>검토 사유 / 수정 메모</label>
+            <textarea value={note} onChange={e=>setNote(e.target.value)} placeholder="AI 제안에 대한 승인·수정·기각 사유를 남겨주세요."/>
+          </div>
+          {!canApprove && <p className="small" style={{marginTop:8}}>현재 역할({role})은 승인 권한이 없습니다. 전담사회복지사로 전환하면 승인할 수 있습니다.</p>}
+          {alreadySignaled && <p className="small" style={{marginTop:8, color:'var(--warn)'}}>이 기록은 이미 검토·승인되었습니다.</p>}
+          <div style={{marginTop:14}}>
+            <button className="btn btn--primary" disabled={!canApprove || alreadySignaled} onClick={approve}>검토 결과 승인 · 신호 생성</button>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="dl" style={{fontWeight:600, marginBottom:10, fontSize:13}}>영역별 구조화 결과</div>
+          {rows.map(r=>(
+            <div key={r.domain} style={{padding:'10px 0', borderBottom:'1px solid var(--line)'}}>
+              <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', gap:8}}>
+                <strong style={{fontSize:12.5}}>{r.label}</strong>
+                <div className="seg" style={{maxWidth:220}}>
+                  {['정상','이상','미확인'].map(v=>(
+                    <button key={v} className={(r.status===v?'on':'')+(v==='이상'?' bad':'')+(v==='미확인'?' unk':'')} onClick={()=>setStatus(r.domain,v)}>{v}</button>
+                  ))}
+                </div>
+              </div>
+              <div className="small" style={{marginTop:4}}>{r.content} · 시점 {r.time} · 변화 {r.changeType && r.changeType!=='-' ? r.changeType : '해당없음'}</div>
+              <div className="pc-excerpt" style={{marginTop:6}}>{r.excerpt}</div>
+              {r.status==='이상' && (
+                <div className="seg" style={{marginTop:6, maxWidth:220}}>
+                  <button className={r.decision==='승인'?'on':''} onClick={()=>setDecision(r.domain,'승인')}>승인</button>
+                  <button className={r.decision==='기각'?'on bad':''} onClick={()=>setDecision(r.domain,'기각')}>기각</button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   화면 7. 우선확인 대시보드
+   ============================================================ */
+function PriorityDashboard({state, setNav}){
+  const [filter, setFilter] = useState('전체');
+  const open = state.signals.filter(s=>s.lifecycle!=='종결');
+  const levels = ['전체', ...Object.keys(URGENCY)];
+  const shown = filter==='전체' ? open : open.filter(s=>s.urgency===filter);
+  const sorted = shown.slice().sort((a,b)=>URGENCY[a.urgency].order-URGENCY[b.urgency].order);
+
+  return (
+    <div>
+      <div className="section-head">
+        <h2>우선확인 대시보드</h2>
+        <span className="count">{sorted.length}건</span>
+      </div>
+      <div className="tag-row" style={{marginBottom:16}}>
+        {levels.map(l=>(<span key={l} className={"tag"+(filter===l?'':' off')} onClick={()=>setFilter(l)}>{l}</span>))}
+      </div>
+      {sorted.length===0 ? <Empty>해당 단계의 신호가 없습니다.</Empty> : (
+        <div className="card-grid">
+          {sorted.map(s=>{
+            const c = state.clients.find(cl=>cl.id===s.clientId);
+            const tone = URGENCY[s.urgency].chip;
+            return (
+              <div className="priority-card" key={s.id} onClick={()=>setNav({screen:'signal', params:{id:s.id}})}>
+                <div className={"stripe stripe--"+tone}></div>
+                <div className="pc-body">
+                  <div className="pc-top">
+                    <div><div className="pc-name">{c?c.alias:'-'}</div><div className="pc-meta">{c?c.caseNo:''} · {s.label}</div></div>
+                    <UrgencyBadge level={s.urgency}/>
+                  </div>
+                  <div className="pc-excerpt">{s.excerpt}</div>
+                  <div className="pc-foot">
+                    <span>변화: {s.changeType && s.changeType!=='-' ? s.changeType : '-'}</span>
+                    <LifecycleBadge state={s.lifecycle}/>
+                  </div>
+                  <div className="pc-foot"><span>처리기한</span><span className="mono">{s.deadline==='즉시'?'즉시':fmtDate(s.deadline)}</span></div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ============================================================
+   화면 8/9. 신호 상세 + 연계 후보 검토/진행
+   ============================================================ */
+function SignalDetail({state, setState, setNav, id, role}){
+  const s = state.signals.find(x=>x.id===id);
+  if(!s) return <Empty>신호를 찾을 수 없습니다.</Empty>;
+  const client = state.clients.find(c=>c.id===s.clientId);
+  const canAct = role!=='생활지원사';
+  const matches = POLICY_SEED.filter(p=>p.domains.includes(s.domain));
+  const clientReferrals = state.referrals.filter(r=>r.signalId===s.id);
+  const [reasonDraft, setReasonDraft] = useState('');
+
+  function setLifecycle(v){
+    setState(st=>({...st, signals: st.signals.map(x=>x.id===id?{...x, lifecycle:v, history:[...x.history,{at:new Date().toISOString(), note:'상태 변경 → '+v}]}:x)}));
+  }
+  function closeSignal(reason){
+    setState(st=>({...st, signals: st.signals.map(x=>x.id===id?{...x, lifecycle:'종결', reviewNote:reason, history:[...x.history,{at:new Date().toISOString(), note:'종결: '+reason}]}:x)}));
+  }
+  function createReferral(policy){
+    const ref = {id:uid('REF'), clientId:s.clientId, signalId:s.id, policyId:policy.id, reason:reasonDraft || (policy.name+' 적합 영역: '+s.label),
+      status:'검토후보', consentDate:'', nextReviewDate:isoDaysFromNow(7), outcome:'', history:[{at:new Date().toISOString(), note:'연계 검토 후보 생성'}]};
+    setState(st=>({...st, referrals:[...st.referrals, ref]}));
+  }
+  function updateReferralStatus(refId, status){
+    setState(st=>({...st, referrals: st.referrals.map(r=>r.id===refId?{...r, status, history:[...r.history,{at:new Date().toISOString(), note:'상태 변경 → '+status}]}:r)}));
+  }
+
+  return (
+    <div>
+      <div className="section-head"><h2>{client?client.alias:''} · {s.label} 신호 상세</h2></div>
+      <div className="two-col">
+        <div className="card">
+          <div style={{display:'flex', gap:8, marginBottom:10}}>
+            <UrgencyBadge level={s.urgency}/><LifecycleBadge state={s.lifecycle}/>
+            {s.changeType && s.changeType!=='-' && <Badge tone="amber">변화: {s.changeType}</Badge>}
+          </div>
+          <div className="pc-excerpt" style={{marginBottom:10}}>{s.excerpt}</div>
+          <div className="kv"><span className="k">시점</span><span>{s.time}</span></div>
+          <div className="kv"><span className="k">처리기한</span><span>{s.deadline==='즉시'?'즉시':fmtDate(s.deadline)}</span></div>
+          <div className="kv"><span className="k">검토자</span><span>{s.reviewedBy}</span></div>
+          <div className="kv"><span className="k">검토 사유</span><span>{s.reviewNote}</span></div>
+
+          <hr className="rule"/>
+          <div className="dl" style={{fontWeight:600, marginBottom:8, fontSize:13}}>진행 상태</div>
+          <div className="tag-row" style={{marginBottom:10}}>
+            {['확인대기','검토완료','조치중','연계중','추적중'].map(v=>(
+              <span key={v} className={"tag"+(s.lifecycle===v?'':' off')} onClick={()=>canAct && setLifecycle(v)}>{v}</span>
+            ))}
+          </div>
+          {canAct && s.lifecycle!=='종결' && (
+            <div style={{display:'flex', gap:8}}>
+              <button className="btn btn--sm" onClick={()=>closeSignal('호전 확인')}>호전으로 종결</button>
+              <button className="btn btn--sm" onClick={()=>closeSignal('서비스 연결 완료')}>서비스 연결 완료로 종결</button>
+              <button className="btn btn--sm" onClick={()=>closeSignal('오탐·정상 일정')}>오탐으로 종결</button>
+            </div>
+          )}
+          {!canAct && <p className="small">생활지원사 역할은 상태 변경 권한이 없습니다.</p>}
+
+          <hr className="rule"/>
+          <div className="dl" style={{fontWeight:600, marginBottom:8, fontSize:13}}>이력</div>
+          <div className="timeline">
+            {s.history.map((h,i)=>(
+              <div className="tl-item" key={i}><div className="tl-dot"></div><div className="tl-when">{fmtDateTime(h.at)}</div><div className="tl-body">{h.note}</div></div>
+            ))}
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="dl" style={{fontWeight:600, marginBottom:8, fontSize:13}}>정책·기관 연계 후보</div>
+          <p className="small" style={{marginBottom:10}}>'신청 가능'이 아닌 '연계 검토 후보'로 표시합니다. 지역 가용성은 별도 확인이 필요합니다.</p>
+          {matches.map(p=>(
+            <div key={p.id} style={{padding:'10px 0', borderBottom:'1px solid var(--line)'}}>
+              <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:8}}>
+                <div><strong style={{fontSize:12.5}}>{p.name}</strong><div className="small">{p.org} · {p.region}</div></div>
+                <button className="btn btn--sm" disabled={!canAct} onClick={()=>createReferral(p)}>연계 후보로 추가</button>
+              </div>
+              <div className="small" style={{marginTop:4}}>대상조건: {p.cond}</div>
+              <div className="small">연락처: {p.contact} · 출처: {p.source} (확인일 {fmtDate(p.date)})</div>
+            </div>
+          ))}
+          {matches.length===0 && <p className="small">매칭되는 정책이 없습니다.</p>}
+
+          <hr className="rule"/>
+          <div className="dl" style={{fontWeight:600, marginBottom:8, fontSize:13}}>연계 진행 현황</div>
+          {clientReferrals.length===0 ? <p className="small">아직 생성된 연계가 없습니다.</p> : clientReferrals.map(r=>{
+            const p = POLICY_SEED.find(x=>x.id===r.policyId);
+            return (
+              <div key={r.id} style={{padding:'10px 0', borderBottom:'1px solid var(--line)'}}>
+                <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                  <strong style={{fontSize:12.5}}>{p?p.name:r.policyId}</strong><ReferralBadge state={r.status}/>
+                </div>
+                <div className="small" style={{margin:'4px 0'}}>{r.reason}</div>
+                <div className="tag-row">
+                  {['검토후보','동의','문의','접수','대기','거절','자격미충족','완료'].map(v=>(
+                    <span key={v} className={"tag"+(r.status===v?'':' off')} onClick={()=>canAct && updateReferralStatus(r.id, v)}>{v}</span>
+                  ))}
+                </div>
+                <div className="small" style={{marginTop:4}}>다음 재평가: {fmtDate(r.nextReviewDate)}</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   화면 10. 대상자 프로필(타임라인)
+   ============================================================ */
+function ClientProfile({state, setNav, id, role}){
+  const client = state.clients.find(c=>c.id===id);
+  if(!client) return <Empty>대상자를 찾을 수 없습니다.</Empty>;
+  const baseline = state.baselines.find(b=>b.clientId===id);
+  const records = state.records.filter(r=>r.clientId===id).sort((a,b)=>b.datetime.localeCompare(a.datetime));
+  const signals = state.signals.filter(s=>s.clientId===id);
+  const referrals = state.referrals.filter(r=>r.clientId===id);
+
+  const events = [
+    {at:client.registeredAt+'T09:00:00', type:'등록', title:'신규 대상자 등록', body:'사례번호 '+client.caseNo},
+    ...(baseline?[{at:baseline.date+'T09:00:00', type:'평소상태', title:'평소상태 등록(v'+baseline.version+')', body:DOMAINS.filter(d=>baseline.domains[d.key]==='어려움').map(d=>d.label).join(', ')||'전 영역 정상·미확인'}]:[]),
+    ...records.map(r=>({at:r.datetime, type:'안부기록', title:r.method+' 상담', body:r.memo})),
+    ...signals.map(s=>({at:s.createdAt, type:'신호', title:s.label+' · '+s.urgency, body:s.reviewNote})),
+    ...referrals.flatMap(r=>r.history.map(h=>({at:h.at, type:'연계', title:(POLICY_SEED.find(p=>p.id===r.policyId)||{}).name+' · '+r.status, body:h.note}))),
+  ].sort((a,b)=>b.at.localeCompare(a.at));
+
+  return (
+    <div>
+      <div className="section-head">
+        <h2>{client.alias}</h2>
+        <div style={{display:'flex', gap:8}}>
+          <button className="btn btn--sm" onClick={()=>setNav({screen:'baseline', params:{clientId:id}})}>평소상태 수정</button>
+          <button className="btn btn--primary btn--sm" onClick={()=>setNav({screen:'checkin', params:{clientId:id}})}>안부확인 시작</button>
+        </div>
+      </div>
+
+      <div className="two-col">
+        <div>
+          <div className="card" style={{marginBottom:16}}>
+            <div className="kv"><span className="k">사례번호</span><span className="mono">{client.caseNo}</span></div>
+            <div className="kv"><span className="k">출생연도 · 성별</span><span>{client.birthYear}년 · {client.gender}</span></div>
+            <div className="kv"><span className="k">지역</span><span>{client.region}</span></div>
+            <div className="kv"><span className="k">담당자</span><span>{client.manager}</span></div>
+            <div className="kv"><span className="k">연락</span><span>{client.contactPref} · {client.contactHours}</span></div>
+            <div className="kv"><span className="k">동의</span><span>{Object.entries(client.consents).filter(([k,v])=>v).map(([k])=>({ai:'AI분석',agency:'기관연계',relative:'관계인연락'}[k])).join(', ')||'없음'}</span></div>
+          </div>
+
+          {baseline && (
+            <div className="card">
+              <div className="dl" style={{fontWeight:600, marginBottom:8, fontSize:13}}>평소상태 (기준값 v{baseline.version})</div>
+              {DOMAINS.map(d=>(
+                <div className="kv" key={d.key}><span className="k">{d.label}</span><BaselineBadge v={baseline.domains[d.key]}/></div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div>
+          <div className="dl" style={{fontWeight:600, marginBottom:10, fontSize:13}}>타임라인</div>
+          <div className="timeline">
+            {events.map((e,i)=>(
+              <div className="tl-item" key={i}>
+                <div className="tl-dot"></div>
+                <div className="tl-when">{fmtDateTime(e.at)} · {e.type}</div>
+                <div className="tl-title">{e.title}</div>
+                {e.body && <div className="tl-body">{role==='기관관리자' && e.type==='안부기록' ? <span className="locked">업무 목적 외 상세 원문 열람 제한</span> : e.body}</div>}
+              </div>
+            ))}
+            {events.length===0 && <Empty>기록이 없습니다.</Empty>}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   화면 11. 정책·기관 DB
+   ============================================================ */
+function PolicyDB({state}){
+  return (
+    <div>
+      <div className="section-head"><h2>정책·기관 DB</h2><span className="count">{POLICY_SEED.length}건</span></div>
+      <div className="table-wrap">
+        <table>
+          <thead><tr><th>정책·기관</th><th>연결 위험영역</th><th>대상조건</th><th>연락처</th><th>출처 · 확인일</th></tr></thead>
+          <tbody>
+            {POLICY_SEED.map(p=>(
+              <tr key={p.id}>
+                <td>{p.name}<div className="small">{p.org} · {p.region}</div></td>
+                <td>{p.domains.map(k=>DOMAIN_MAP[k]?.label).filter(Boolean).join(', ')}</td>
+                <td>{p.cond}</td>
+                <td>{p.contact}</td>
+                <td>{p.source}<div className="small mono">{fmtDate(p.date)}</div></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   화면 12. 관리자 통계
+   ============================================================ */
+function AdminStats({state}){
+  const openSignals = state.signals.filter(s=>s.lifecycle!=='종결');
+  const overdue = openSignals.filter(s=>{ if(s.deadline==='즉시') return s.lifecycle==='신규'; const du=daysUntil(s.deadline); return du!==null && du<0; });
+  const closedFalse = state.signals.filter(s=>s.lifecycle==='종결' && (s.reviewNote||'').includes('오탐'));
+  const byDomain = {};
+  state.signals.forEach(s=>{ byDomain[s.label]=(byDomain[s.label]||0)+1; });
+  const domainRows = Object.entries(byDomain).sort((a,b)=>b[1]-a[1]);
+  const referralDone = state.referrals.filter(r=>r.status==='완료').length;
+
+  return (
+    <div>
+      <div className="section-head"><h2>관리자 통계</h2></div>
+      <div className="stat-grid" style={{marginBottom:24}}>
+        <div className="stat-tile"><div className="stat-num mono">{openSignals.length}</div><div className="stat-label">미처리 경고</div></div>
+        <div className="stat-tile"><div className="stat-num mono" style={{color:'var(--danger)'}}>{overdue.length}</div><div className="stat-label">기한초과</div></div>
+        <div className="stat-tile"><div className="stat-num mono" style={{color:'var(--warn)'}}>{closedFalse.length}</div><div className="stat-label">오탐 종결</div></div>
+        <div className="stat-tile"><div className="stat-num mono" style={{color:'var(--good)'}}>{referralDone}</div><div className="stat-label">연계 완료</div></div>
+      </div>
+
+      <div className="section-head"><h2>위험영역별 경고 추세</h2></div>
+      <div className="table-wrap" style={{marginBottom:24}}>
+        <table><thead><tr><th>위험영역</th><th>누적 경고 수</th></tr></thead>
+          <tbody>{domainRows.map(([k,v])=>(<tr key={k}><td>{k}</td><td className="mono">{v}</td></tr>))}
+            {domainRows.length===0 && <tr><td colSpan="2"><Empty>데이터가 없습니다.</Empty></td></tr>}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="section-head"><h2>감사 이력 (최근 순)</h2></div>
+      <div className="table-wrap">
+        <table><thead><tr><th>시각</th><th>행위자</th><th>동작</th><th>상세</th></tr></thead>
+          <tbody>
+            {state.audit.slice().sort((a,b)=>b.at.localeCompare(a.at)).slice(0,20).map(l=>(
+              <tr key={l.id}><td className="mono small">{fmtDateTime(l.at)}</td><td>{l.actor}</td><td>{l.action}</td><td>{l.detail}</td></tr>
+            ))}
+            {state.audit.length===0 && <tr><td colSpan="4"><Empty>이력이 없습니다.</Empty></td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   App 루트
+   ============================================================ */
+function App(){
+  const [state, setState] = useState(loadState());
+  const [nav, setNav] = useState({screen:'dashboard'});
+  const [role, setRole] = useState('전담사회복지사');
+  const [query, setQuery] = useState('');
+
+  useEffect(()=>{ saveState(state); }, [state]);
+
+  const titles = {
+    dashboard:['오늘의 업무','로그인 계정: '+role],
+    clients:['대상자 목록','전체 담당 대상자'],
+    client:['대상자 상세','타임라인 · 평소상태 · 신호'],
+    newClient:['신규 대상자 등록','중복확인 → 기본정보 → 동의'],
+    baseline:['평소상태 등록','변화 비교의 기준값'],
+    checkin:['안부 확인','질문추천 · 전화·방문 기록'],
+    analysis:['AI 분석 검토','구조화 결과 승인·수정·기각'],
+    priority:['우선확인 대시보드','긴급·당일·연계검토·추적관찰'],
+    signal:['신호 상세','연계 후보 · 진행상태'],
+    policies:['정책·기관 DB','부록 B 구조 기반'],
+    admin:['관리자 통계','미처리·기한초과·오탐·감사이력'],
+  };
+  const [title, crumb] = titles[nav.screen] || ['잘한다잘한다',''];
+
+  let body = null;
+  if(nav.screen==='dashboard') body = <Dashboard state={state} setNav={setNav} role={role}/>;
+  else if(nav.screen==='clients') body = <ClientList state={state} setNav={setNav} query={query}/>;
+  else if(nav.screen==='client') body = <ClientProfile state={state} setNav={setNav} id={nav.params.id} role={role}/>;
+  else if(nav.screen==='newClient') body = <NewClientWizard state={state} setState={setState} setNav={setNav}/>;
+  else if(nav.screen==='baseline') body = <BaselineForm state={state} setState={setState} setNav={setNav} clientId={nav.params.clientId} isNew={nav.params.isNew}/>;
+  else if(nav.screen==='checkin') body = <CheckinForm state={state} setState={setState} setNav={setNav} clientId={nav.params.clientId}/>;
+  else if(nav.screen==='analysis') body = <AnalysisReview state={state} setState={setState} setNav={setNav} recordId={nav.params.recordId} role={role}/>;
+  else if(nav.screen==='priority') body = <PriorityDashboard state={state} setNav={setNav}/>;
+  else if(nav.screen==='signal') body = <SignalDetail state={state} setState={setState} setNav={setNav} id={nav.params.id} role={role}/>;
+  else if(nav.screen==='policies') body = <PolicyDB state={state}/>;
+  else if(nav.screen==='admin') body = <AdminStats state={state}/>;
+
+  return (
+    <div className="app-shell">
+      <Sidebar nav={nav} setNav={setNav} role={role} setRole={setRole}/>
+      <div className="main">
+        <TopBar title={title} crumb={crumb} onSearch={nav.screen==='clients'?setQuery:null} query={query}/>
+        <div className="content">{body}</div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
