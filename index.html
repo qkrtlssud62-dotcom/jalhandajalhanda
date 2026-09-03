@@ -324,6 +324,27 @@ const CASEWORKER_SEED = [
 
 const NEG_WORDS = ['없','못','안 ','않','어렵','힘들','감소','악화','불편','깜빡','잊','넘어지','어지럼','누락','중단','거부','싫다','부족','악해','저하','곤란','장벽','의심','미룸','미루'];
 const POS_WORDS = ['잘','좋아','정상','괜찮','문제 없','이상 없','잘 지내','잘 드심','잘 드셨','잘 주무','잘 챙'];
+
+/* 1글자짜리 NEG_WORDS/POS_WORDS('못','잘','잊' 등)는 다른 단어 속 글자와 우연히 겹쳐 오탐을 낸다.
+   예: '못'→"연못"(pond), '잘'→"잘리다/해고"(fired, 부정적인데 POS로 오판), '잊'→"잊지 않고"(안 잊음=긍정인데 NEG로 오판).
+   진짜 해결은 형태소 분석기로 조사·어간 경계를 인식해야 하지만, 이 데모는 키워드 매칭 수준이라 하지 않는다.
+   최소한의 방어로, 알려진 오탐 문구가 함께 등장하면 그 짧은 키워드는 판정에서 제외한다.
+   개선 여지: 새로운 오탐 사례를 발견할 때마다 아래 목록에 추가하거나, 장기적으로는 조사·어미를 보고
+   실제 단어 경계를 판별하는 정규식(또는 형태소 분석)으로 교체할 것. */
+const SHORT_WORD_EXCEPTIONS = {
+  '못': ['연못'],
+  '잘': ['잘리', '잘렸', '잘림', '해고'],
+  '잊': ['잊지 않', '잊지않', '잊지 말', '잊지말'],
+};
+function includesAnyGuarded(text, words){
+  return words.some(w=>{
+    if(!text.includes(w)) return false;
+    const exceptions = SHORT_WORD_EXCEPTIONS[w];
+    if(exceptions && exceptions.some(ex=>text.includes(ex))) return false;
+    return true;
+  });
+}
+
 const EMERGENCY_WORDS = ['자살','자해','없어지고 싶','의미가 없','죽고 싶','화재','불이 나','의식이','쓰러지','학대','폭력','때리','숨을 못'];
 const TIME_WORDS = [
   {kw:'어제', label:'어제'},{kw:'오늘', label:'오늘'},{kw:'이번 주', label:'이번 주'},{kw:'이번주', label:'이번 주'},
@@ -393,6 +414,23 @@ function fmtDateTime(iso){ if(!iso) return '-'; try{ return new Date(iso).toLoca
 function daysUntil(iso){ if(!iso) return null; const d=new Date(iso+'T00:00:00'); const t=new Date(); t.setHours(0,0,0,0); return Math.round((d-t)/86400000); }
 function includesAny(text, arr){ return arr.some(w=>text.includes(w)); }
 
+/* 개발용 자가 테스트 — 브라우저 콘솔에서 확인 가능. 짧은 키워드 오탐 방지 가드(SHORT_WORD_EXCEPTIONS)가
+   알려진 오탐 사례를 실제로 걸러내는지, 그리고 정상적인 부정·긍정 판정까지 함께 죽이지는 않는지 검증한다.
+   새 오탐 사례를 발견하면 이 목록에도 케이스를 추가해서 계속 방어되는지 확인할 것. */
+(function runKeywordGuardSelfTests(){
+  const cases = [
+    {text:'마당에 예쁜 연못이 있어요.', words:NEG_WORDS, expect:false, note:"'못' 오탐 방지 — 연못(pond)"},
+    {text:'지난달에 일자리에서 잘렸다고 하심.', words:POS_WORDS, expect:false, note:"'잘' 오탐 방지 — 잘리다(해고, 부정적 사건)"},
+    {text:'약 챙기는 것을 잊지 말고 잘 챙기신다고 함.', words:NEG_WORDS, expect:false, note:"'잊' 오탐 방지 — 잊지 말고(=안 잊음, 긍정)"},
+    {text:'약을 못 챙기셨다고 함.', words:NEG_WORDS, expect:true, note:'정상 부정 판정 유지 — 못 챙김'},
+    {text:'식사를 잘 챙기신다고 함.', words:POS_WORDS, expect:true, note:'정상 긍정 판정 유지 — 잘 챙김'},
+  ];
+  cases.forEach(c=>{
+    const actual = includesAnyGuarded(c.text, c.words);
+    console.assert(actual===c.expect, '[키워드 오탐 가드 테스트 실패] '+c.note+' → 기대 '+c.expect+', 실제 '+actual);
+  });
+})();
+
 /* 문장·절 단위 분리: 마침표류 종결부호, "다고 함/하심"류 인용 종결, "는데·지만" 같은 대조 연결어에서 끊는다.
    도메인별 긍정·부정 판정을 이 단위로 국한해, 다른 영역을 설명하는 절의 부정어가 섞여 들어오지 않게 한다. */
 function splitClauses(text){
@@ -415,8 +453,8 @@ function analyzeMemo(memo, baseline){
     // 이 도메인 키워드가 실제로 등장한 문장(절)만 골라, 그 절 전체를 근거(excerpt)로 쓰고 긍정·부정도 그 범위에서만 판정한다
     const clause = clauses.find(c=>c.includes(hit)) || text;
     const excerpt = clause.trim();
-    const neg = includesAny(clause, NEG_WORDS);
-    const pos = includesAny(clause, POS_WORDS);
+    const neg = includesAnyGuarded(clause, NEG_WORDS);
+    const pos = includesAnyGuarded(clause, POS_WORDS);
     const timeHit = TIME_WORDS.find(t=>text.includes(t.kw));
     const time = timeHit ? timeHit.label : '최근';
     let status = '미확인';
