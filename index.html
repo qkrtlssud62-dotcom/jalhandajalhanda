@@ -393,9 +393,20 @@ function fmtDateTime(iso){ if(!iso) return '-'; try{ return new Date(iso).toLoca
 function daysUntil(iso){ if(!iso) return null; const d=new Date(iso+'T00:00:00'); const t=new Date(); t.setHours(0,0,0,0); return Math.round((d-t)/86400000); }
 function includesAny(text, arr){ return arr.some(w=>text.includes(w)); }
 
+/* 문장·절 단위 분리: 마침표류 종결부호, "다고 함/하심"류 인용 종결, "는데·지만" 같은 대조 연결어에서 끊는다.
+   도메인별 긍정·부정 판정을 이 단위로 국한해, 다른 영역을 설명하는 절의 부정어가 섞여 들어오지 않게 한다. */
+function splitClauses(text){
+  if(!text) return [];
+  return text
+    .split(/(?<=[.!?])\s+|(?<=(?:다고 함|라고 함|다고 하심|라고 하심|하셨다고 함|하신다고 함))\s+(?=[가-힣])|(?<=(?:는데|지만))\s*/)
+    .map(s=>s.trim())
+    .filter(Boolean);
+}
+
 /* 메모를 5개 핵심 위험영역으로 구조화하는 규칙기반 분석 엔진 (실제 AI 호출 대신 데모용 키워드 매칭) */
 function analyzeMemo(memo, baseline){
   const text = memo || '';
+  const clauses = splitClauses(text);
   const rows = DOMAINS.map(d=>{
     const hit = d.kw.find(k=>text.includes(k));
     if(!hit){
@@ -405,8 +416,10 @@ function analyzeMemo(memo, baseline){
     const start = Math.max(0, idx-9);
     const end = Math.min(text.length, idx+hit.length+9);
     const excerpt = text.slice(start,end).trim();
-    const neg = includesAny(text, NEG_WORDS);
-    const pos = includesAny(text, POS_WORDS);
+    // 이 도메인 키워드가 실제로 등장한 문장(절)만 골라 그 범위에서 긍정·부정을 판정한다
+    const clause = clauses.find(c=>c.includes(hit)) || text;
+    const neg = includesAny(clause, NEG_WORDS);
+    const pos = includesAny(clause, POS_WORDS);
     const timeHit = TIME_WORDS.find(t=>text.includes(t.kw));
     const time = timeHit ? timeHit.label : '최근';
     let status = '미확인';
