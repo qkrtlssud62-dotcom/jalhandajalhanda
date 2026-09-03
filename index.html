@@ -603,7 +603,7 @@ const NAV_ITEMS = [
   {key:'admin', label:'관리자 통계', ico:'▤'},
 ];
 
-function Sidebar({nav, setNav, role, setRole, caseworkers, currentCaseworkerId, setCurrentCaseworkerId, onRenameCaseworker}){
+function Sidebar({nav, setNav, caseworkers, currentCaseworkerId, setCurrentCaseworkerId, onRenameCaseworker}){
   const [renaming, setRenaming] = useState(false);
   const [draftName, setDraftName] = useState('');
   const current = caseworkers.find(w=>w.id===currentCaseworkerId) || caseworkers[0];
@@ -642,14 +642,6 @@ function Sidebar({nav, setNav, role, setRole, caseworkers, currentCaseworkerId, 
           </div>
         )}
         <p className="side-hint">담당자가 바뀌면 이름만 바꿔서 이어 쓸 수 있습니다.</p>
-      </div>
-      <div className="role-switch">
-        <label>현재 역할</label>
-        <select value={role} onChange={e=>setRole(e.target.value)}>
-          <option>생활지원사</option>
-          <option>전담사회복지사</option>
-          <option>기관관리자</option>
-        </select>
       </div>
       <div className="nav">
         {NAV_ITEMS.map(it=>(
@@ -1145,7 +1137,7 @@ function AnalysisReview({state, setState, setNav, recordId, role}){
             <label>검토 사유 / 수정 메모</label>
             <textarea value={note} onChange={e=>setNote(e.target.value)} placeholder="AI 제안에 대한 승인·수정·기각 사유를 남겨주세요."/>
           </div>
-          {!canApprove && <p className="small" style={{marginTop:8}}>현재 역할({role})은 승인 권한이 없습니다. 전담사회복지사로 전환하면 승인할 수 있습니다.</p>}
+          {!canApprove && <p className="small" style={{marginTop:8}}>생활지원사는 이 화면에서 직접 승인할 수 없습니다. 확인한 내용을 담당 전담사회복지사에게 전달해 주세요.</p>}
           {alreadySignaled && <p className="small" style={{marginTop:8, color:'var(--warn)'}}>이 기록은 이미 검토·승인되었습니다.</p>}
           <div style={{marginTop:14}}>
             <button className="btn btn--primary" disabled={!canApprove || alreadySignaled} onClick={approve}>검토 결과 승인 · 신호 생성</button>
@@ -1483,7 +1475,7 @@ function AdminStats({state}){
 function App(){
   const [state, setState] = useState(loadState());
   const [nav, setNav] = useState({screen:'dashboard'});
-  const [role, setRole] = useState('전담사회복지사');
+  const role = '생활지원사'; // 역할 전환 UI 제거 — 항상 생활지원사 권한으로 고정
   const [query, setQuery] = useState('');
   const [currentCaseworkerId, setCurrentCaseworkerId] = useState(state.caseworkers[0].id);
 
@@ -1506,7 +1498,7 @@ function App(){
   }), [state, visibleClientIds]);
 
   const titles = {
-    dashboard:['오늘의 업무','담당자(나): '+currentCaseworker.name+' · 역할: '+role],
+    dashboard:['오늘의 업무','담당자(나): '+currentCaseworker.name],
     clients:['대상자 목록', currentCaseworker.name+' 담당 대상자'],
     client:['대상자 상세','타임라인 · 평소상태 · 신호'],
     newClient:['신규 대상자 등록','중복확인 → 기본정보 → 동의'],
@@ -1535,7 +1527,7 @@ function App(){
 
   return (
     <div className="app-shell">
-      <Sidebar nav={nav} setNav={setNav} role={role} setRole={setRole}
+      <Sidebar nav={nav} setNav={setNav}
         caseworkers={state.caseworkers} currentCaseworkerId={currentCaseworkerId}
         setCurrentCaseworkerId={setCurrentCaseworkerId} onRenameCaseworker={renameCaseworker}/>
       <div className="main">
