@@ -324,9 +324,25 @@ const DOMAINS = [
    // '아프다'는 으불규칙 활용이라 '아파/아팠/아픈'이 '아프'를 부분문자열로 포함하지 않는다 — 각 활용형을 별도로 등록
    kw:['아프','아파','아팠','아픈','통증','쑤시','병원','진료','수술','퇴원','기침','열이','발열','호흡','숨차']},
   {key:'fall',       label:'낙상·거동',    hint:'실제 낙상, 휘청거림, 보행 곤란, 외출 어려움',
-   kw:['넘어지','낙상','어지럼','어지러','계단','화장실','거동','휘청','주저앉','외출','나가지','보행','걷기']},
+   // '넘어지다'류는 '지+어→져', '지+었→졌' 축약이 일어나 어간 '넘어지'만으로는 "넘어져서"·"넘어졌다"를
+   // 못 잡는다('아프다'와 같은 종류의 활용 축약). 그래서 축약된 형태도 별도 키워드로 등록해둔다.
+   kw:['넘어지','넘어졌','넘어져','낙상','어지럼','어지러','계단','화장실','거동','휘청','주저앉','외출','나가지','보행','걷기',
+       '미끄러지','미끄러졌','미끄러져','굴러떨어지','굴러떨어졌','굴러떨어져',
+       '못 일어나','못 일어났','일어나지 못하','일어나지 못했',
+       '움직이지 못하','움직이지 못했',
+       '머리를 부딪치','머리를 부딪쳤','머리를 부딪쳐',
+       '출혈이 있','의식이 흐리','의식이 흐렸','의식이 흐려']},
   {key:'medication', label:'복약·의료이용', hint:'약 누락·중복, 처방약 부족, 병원 방문 필요',
    kw:['약','복약','투약','처방','약값','예약']},
+  {key:'cognition',  label:'인지·의사소통', hint:'날짜·장소 혼동, 반복 질문, 가족 못 알아봄, 가스불·문단속 잊음, 기억력 변화',
+   /* 단발성 복약 누락('약을 깜빡')과 구분하기 위해, 이 목록에는 그 자체로 인지 저하 근거가 되는
+      구체적인 문구만 넣는다('깜빡'·'잊' 같은 짧은 단어 단독으로는 절대 넣지 않음). */
+   kw:['날짜를 모르','요일을 모르','무슨 요일','오늘이 며칠','지금이 몇 시','여기가 어디','장소를 헷갈','길을 잃',
+       '못 알아보','알아보지 못',
+       '같은 질문','질문을 반복','했던 말을 또',
+       '약속을 자꾸 잊','약속을 반복해서 잊','하기로 한 일을 자꾸 잊',
+       '가스불을 안 끄','가스불을 잠그지 않','가스 불을 안 끄','문단속을 잊','문을 안 잠그',
+       '기억력이 나빠','기억력이 떨어','건망증이 심해']},
 ];
 const DOMAIN_MAP = Object.fromEntries(DOMAINS.map(d=>[d.key,d]));
 /* 자살·자해·화재·학대 등 사전 정의 규칙으로 즉시 알림되는 표현 — 5개 핵심 위험영역과 별개로 항상 감지한다 */
@@ -364,6 +380,24 @@ function includesAnyGuarded(text, words){
 }
 
 const EMERGENCY_WORDS = ['자살','자해','없어지고 싶','의미가 없','죽고 싶','화재','불이 나','의식이','쓰러지','학대','폭력','때리','숨을 못'];
+
+/* 낙상 긴급 조합 판정: '넘어졌다' 한 마디만으로 무조건 긴급 처리하지 않는다.
+   낙상 표현 + 아래 심각 징후(일어나지 못함/머리 충격/출혈/의식 변화/심한 통증·움직임 곤란) 중
+   하나 이상이 함께 있을 때만 긴급확인으로 올린다. */
+// '지+어→져'/'지+었→졌' 축약 때문에 어간만으로는 "넘어져서"·"넘어졌다" 같은 실제 표현을 못 잡는다 — 축약형도 함께 등록.
+const FALL_WORDS = ['넘어지','넘어졌','넘어져','낙상','미끄러지','미끄러졌','미끄러져','굴러떨어지','굴러떨어졌','굴러떨어져'];
+const FALL_SEVERE_WORDS = [
+  '못 일어나','못 일어났','일어나지 못하','일어나지 못했',
+  '움직이지 못하','움직이지 못했',
+  '머리를 부딪치','머리를 부딪쳤','머리를 부딪쳐',
+  '출혈이 있','피가 나',
+  '의식이 흐리','의식이 흐렸','의식이 흐려',
+  '통증이 심','심하게 아프','너무 아프',
+];
+function detectFallEmergency(text){
+  if(!includesAny(text, FALL_WORDS)) return false;
+  return includesAny(text, FALL_SEVERE_WORDS) || includesAny(text, EMERGENCY_WORDS);
+}
 const TIME_WORDS = [
   {kw:'어제', label:'어제'},{kw:'오늘', label:'오늘'},{kw:'이번 주', label:'이번 주'},{kw:'이번주', label:'이번 주'},
   {kw:'지난주', label:'지난주'},{kw:'지난 주', label:'지난주'},{kw:'요즘', label:'요즘'},{kw:'최근', label:'최근'},{kw:'며칠', label:'며칠 전'},
@@ -391,34 +425,114 @@ const QUESTIONS_REGULAR = [
   '최근 넘어지거나 어지러운 적 있으셨나요? 밖에 나가시는 데 어려움은 없으신가요?',
   '드시는 약은 거르지 않고 챙기고 계신가요? 병원 갈 일은 없으신가요?',
 ];
+/* DOMAINS와 QUESTIONS_REGULAR는 같은 순서(식사·수면·통증·낙상·복약)로 정의되어 있어 인덱스로 매핑한다.
+   판단 근거가 부족해 '미확인'으로 남긴 영역을 다음 통화에서 무엇부터 물어볼지 안내하는 용도. */
+const DOMAIN_NEXT_QUESTION = Object.fromEntries(DOMAINS.map((d,i)=>[d.key, QUESTIONS_REGULAR[i]]));
 const QUESTIONS_SITUATION = [
   {tag:'폭염', q:'냉방기구는 잘 작동하시나요? 물은 충분히 드시고 계신가요?'},
   {tag:'한파', q:'난방은 잘 되고 계신가요? 외출 시 방한은 어떻게 하고 계신가요?'},
   {tag:'퇴원', q:'퇴원 후 처방받은 약과 통원 일정은 잘 지키고 계신가요?'},
 ];
 
-/* 정책·기관 DB (부록 B 구조, 공식 출처는 문서 부록 C 참고자료 기반) */
+const GU_LIST = [
+  {key:'donggu', label:'동구'}, {key:'seogu', label:'서구'}, {key:'namgu', label:'남구'},
+  {key:'bukgu', label:'북구'}, {key:'gwangsangu', label:'광산구'},
+];
+function regionToGu(region){
+  if(!region) return null;
+  const hit = GU_LIST.find(g=>region.includes(g.label));
+  return hit ? hit.key : null;
+}
+
+/* 정책·기관 DB (부록 B 구조, 공식 출처는 문서 부록 C 참고자료 기반).
+   contact(실제 연락처)·url(공식 홈페이지)는 검증된 값만 채운다. 109/112/119/129/1577-1389 같은 전국
+   대표 단축번호는 이미 공개적으로 확립된 값이라 그대로 쓰지만, 구별 보건소·치매안심센터·정신건강복지센터 등
+   개별 기관의 실제 전화번호·URL은 임의로 지어내지 않고 null로 비워 화면에서 "확인 필요"로 안내한다.
+   (전화번호를 잘못 지어내면 위기 상황에서 실제로 위험할 수 있어, 정확한 값은 별도 확인 후 채워 넣을 것.) */
 const POLICY_SEED = [
-  {id:'P-01', name:'노인맞춤돌봄서비스 (특화서비스)', org:'수행기관 · 읍면동', region:'전남 광주 전역', domains:['nutrition','fall'],
-   cond:'만 65세 이상 독거·조손·고령부부 등 돌봄필요군', apply:'읍면동 접수 → 수행기관 사정 → 서비스 연계', contact:'관할 읍면동 행정복지센터', source:'보건복지부 2026년 노인맞춤돌봄서비스 사업안내', date:'2026-08-24'},
-  {id:'P-02', name:'지역사회 통합돌봄 창구', org:'시군구 통합돌봄창구', region:'전남 광주 전역', domains:['medication','fall','nutrition'],
-   cond:'복합욕구·퇴원 후 돌봄 공백이 있는 주민', apply:'읍면동·시군구 신청 → 조사 → 개인지원계획 수립', contact:'관할 시군구 통합돌봄창구', source:'보건복지부 지역사회 통합돌봄 한눈에 보기', date:'2026-08-24'},
-  {id:'P-03', name:'정신건강복지센터 상담', org:'지역 정신건강복지센터', region:'전남 광주 전역', domains:['emergency'],
-   cond:'우울·고립·정서적 어려움을 겪는 주민 (제한 없음)', apply:'센터 direct 상담 신청 또는 담당자 의뢰', contact:'국가정신건강정보포털 안내', source:'국가정신건강정보포털', date:'2026-08-24'},
-  {id:'P-04', name:'자살예방상담전화 109', org:'보건복지상담센터', region:'전국', domains:['emergency'],
-   cond:'자살·자해 위기 표현이 있는 경우 (24시간)', apply:'즉시 전화 연결, 별도 신청 불요', contact:'109 (24시간)', source:'보건복지상담센터 109', date:'2026-08-24'},
-  {id:'P-05', name:'치매안심센터 선별검사', org:'관할 치매안심센터', region:'전남 광주 전역', domains:['medication'],
-   cond:'인지저하 의심 소견이 있는 60세 이상', apply:'센터 방문·전화 예약 후 선별검사', contact:'관할 보건소 치매안심센터', source:'보건복지부 정책 안내', date:'2026-08-24'},
-  {id:'P-06', name:'보건소 방문건강관리', org:'관할 보건소', region:'전남 광주 전역', domains:['medication','pain'],
-   cond:'복약관리·만성질환 관리가 필요한 주민', apply:'보건소 등록 후 방문간호 연계', contact:'관할 보건소', source:'보건복지부 정책 안내', date:'2026-08-24'},
-  {id:'P-07', name:'장기요양 등급 재사정', org:'국민건강보험공단', region:'전국', domains:['fall','nutrition'],
-   cond:'일상생활 기능저하가 지속되는 65세 이상', apply:'공단 신청 → 등급판정 → 서비스 연계', contact:'국민건강보험공단', source:'보건복지부 정책 안내', date:'2026-08-24'},
-  {id:'P-08', name:'긴급복지지원 (129)', org:'읍면동 행정복지센터', region:'전남 광주 전역', domains:['medication'],
-   cond:'공과금·병원비 등 위기상황에 처한 가구', apply:'읍면동 신청 또는 129 상담 후 연계', contact:'129 (24시간) / 관할 읍면동', source:'보건복지상담센터 129', date:'2026-08-24'},
-  {id:'P-09', name:'독거노인 응급안전안심서비스', org:'수행기관', region:'전남 광주 전역', domains:['fall'],
-   cond:'화재·활동량·응급호출 감지 장비가 필요한 독거 어르신', apply:'수행기관 신청 → 장비 설치 대상 여부 검토', contact:'관할 수행기관', source:'보건복지부 응급안전안심서비스 안내', date:'2026-08-24'},
-  {id:'P-10', name:'노인보호전문기관 (1577-1389)', org:'중앙노인보호전문기관', region:'전국', domains:['emergency'],
-   cond:'학대·방임이 의심되는 경우 (즉시 대응)', apply:'1577-1389 또는 112 즉시 신고', contact:'1577-1389 (24시간)', source:'중앙노인보호전문기관', date:'2026-08-24'},
+  {id:'ORG-GJDAUM', name:'광주다움 통합돌봄', serviceType:'통합돌봄', org:'광주광역시 · 자치구 통합돌봄창구', region:'전남 광주 전역', gu:null,
+   domains:['nutrition','fall','pain','medication','cognition'],
+   cond:'돌봄이 필요한 위기가구·노인·중장년 등 (소득 제한 없이 신청 가능)', apply:'주소지 자치구 통합돌봄창구 신청 → 조사 → 통합돌봄계획 수립',
+   contact:null, url:null, checkedDate:'2026-08-24', expireDate:'2027-02-24', regionAvailable:true,
+   recommendText:'여러 영역에 걸친 돌봄 공백이 우려될 때 가장 먼저 연계를 검토하세요.', source:'광주광역시 광주다움 통합돌봄 사업안내'},
+
+  {id:'P-01', name:'노인맞춤돌봄서비스 (특화서비스)', serviceType:'돌봄서비스', org:'수행기관 · 읍면동', region:'전남 광주 전역', gu:null,
+   domains:['nutrition','fall'],
+   cond:'만 65세 이상 독거·조손·고령부부 등 돌봄필요군', apply:'읍면동 접수 → 수행기관 사정 → 서비스 연계',
+   contact:null, url:null, checkedDate:'2026-08-24', expireDate:'2027-02-24', regionAvailable:true,
+   recommendText:'정기적인 안부확인·생활지원이 필요한 독거 어르신에게 적합합니다.', source:'보건복지부 2026년 노인맞춤돌봄서비스 사업안내'},
+
+  {id:'P-02', name:'지역사회 통합돌봄 창구', serviceType:'통합돌봄', org:'시군구 통합돌봄창구', region:'전남 광주 전역', gu:null,
+   domains:['medication','fall','nutrition'],
+   cond:'복합욕구·퇴원 후 돌봄 공백이 있는 주민', apply:'읍면동·시군구 신청 → 조사 → 개인지원계획 수립',
+   contact:null, url:null, checkedDate:'2026-08-24', expireDate:'2027-02-24', regionAvailable:true,
+   recommendText:'퇴원 직후처럼 여러 서비스를 한 번에 조율해야 할 때 연계하세요.', source:'보건복지부 지역사회 통합돌봄 한눈에 보기'},
+
+  ...GU_LIST.map(g=>({
+    id:'ORG-HEALTHCENTER-'+g.key, name:'광주 '+g.label+' 보건소', serviceType:'보건의료', org:'광주광역시 '+g.label+'보건소', region:'광주 '+g.label, gu:g.key,
+    domains:['medication','pain'],
+    cond:'복약관리·만성질환 관리, 방문건강관리가 필요한 관내 주민', apply:'보건소 등록 후 방문간호·건강관리 연계',
+    contact:null, url:null, checkedDate:'2026-08-24', expireDate:'2027-02-24', regionAvailable:true,
+    recommendText:'복약 누락이나 만성질환 관리가 걱정될 때 관할 보건소로 연계하세요.', source:'보건복지부 정책 안내',
+  })),
+
+  ...GU_LIST.map(g=>({
+    id:'ORG-DEMENTIA-'+g.key, name:'광주 '+g.label+' 치매안심센터', serviceType:'치매관리', org:'광주광역시 '+g.label+' 치매안심센터', region:'광주 '+g.label, gu:g.key,
+    domains:['cognition','medication'],
+    cond:'인지저하 의심 소견이 있는 60세 이상 관내 주민', apply:'센터 방문·전화 예약 후 선별검사',
+    contact:null, url:null, checkedDate:'2026-08-24', expireDate:'2027-02-24', regionAvailable:true,
+    recommendText:'인지·의사소통 변화가 관찰되면 관할 치매안심센터 선별검사를 안내하세요.', source:'보건복지부 정책 안내',
+  })),
+
+  ...GU_LIST.map(g=>({
+    id:'ORG-MENTAL-'+g.key, name:'광주 '+g.label+' 정신건강복지센터', serviceType:'정신건강', org:'광주광역시 '+g.label+' 정신건강복지센터', region:'광주 '+g.label, gu:g.key,
+    domains:['emergency'],
+    cond:'우울·고립·정서적 어려움을 겪는 관내 주민 (제한 없음)', apply:'센터 직접 상담 신청 또는 담당자 의뢰',
+    contact:null, url:null, checkedDate:'2026-08-24', expireDate:'2027-02-24', regionAvailable:true,
+    recommendText:'우울감·고립감 등 정서적 위기 신호가 있을 때 연계하세요.', source:'국가정신건강정보포털',
+  })),
+
+  {id:'ORG-109', name:'자살예방상담전화 109', serviceType:'상담전화', org:'보건복지상담센터', region:'전국', gu:null,
+   domains:['emergency'],
+   cond:'자살·자해 위기 표현이 있는 경우 (24시간)', apply:'즉시 전화 연결, 별도 신청 불요',
+   contact:'109 (24시간)', url:null, checkedDate:'2026-08-24', expireDate:'2027-02-24', regionAvailable:true,
+   recommendText:'자살·자해 암시가 있으면 다른 절차보다 우선해 즉시 연결하세요.', source:'보건복지상담센터 109'},
+
+  {id:'ORG-LTC-INSURANCE', name:'노인장기요양보험', serviceType:'장기요양', org:'국민건강보험공단', region:'전국', gu:null,
+   domains:['fall','nutrition'],
+   cond:'일상생활 기능저하가 지속되는 65세 이상', apply:'공단 신청 → 등급판정 → 서비스 연계',
+   contact:null, url:null, checkedDate:'2026-08-24', expireDate:'2027-02-24', regionAvailable:true,
+   recommendText:'거동·일상생활 어려움이 반복·악화될 때 등급 신청을 안내하세요.', source:'보건복지부 정책 안내'},
+
+  {id:'ORG-129', name:'보건복지상담센터 129', serviceType:'상담전화', org:'보건복지상담센터', region:'전국', gu:null,
+   domains:['medication','nutrition','fall'],
+   cond:'복지 위기상황 전반에 대한 상담·안내가 필요한 경우 (24시간)', apply:'129 즉시 전화 상담, 필요 시 관할 읍면동 연계',
+   contact:'129 (24시간)', url:null, checkedDate:'2026-08-24', expireDate:'2027-02-24', regionAvailable:true,
+   recommendText:'어떤 복지서비스를 먼저 연계해야 할지 판단이 어려울 때 상담받으세요.', source:'보건복지상담센터 129'},
+
+  {id:'ORG-SAFE-DEVICE', name:'독거노인·장애인 응급안전안심서비스', serviceType:'응급안전', org:'수행기관', region:'전남 광주 전역', gu:null,
+   domains:['fall'],
+   cond:'화재·활동량·응급호출 감지 장비가 필요한 독거 어르신·장애인', apply:'수행기관 신청 → 장비 설치 대상 여부 검토',
+   contact:null, url:null, checkedDate:'2026-08-24', expireDate:'2027-02-24', regionAvailable:true,
+   recommendText:'혼자 지내며 낙상·화재 위험이 있는 경우 안전 장비 설치를 검토하세요.', source:'보건복지부 응급안전안심서비스 안내'},
+
+  {id:'ORG-1577', name:'노인보호전문기관 (1577-1389)', serviceType:'인권보호', org:'중앙노인보호전문기관', region:'전국', gu:null,
+   domains:['emergency'],
+   cond:'학대·방임이 의심되는 경우 (즉시 대응)', apply:'1577-1389 또는 112 즉시 신고',
+   contact:'1577-1389 (24시간)', url:null, checkedDate:'2026-08-24', expireDate:'2027-02-24', regionAvailable:true,
+   recommendText:'학대·방임 정황이 있으면 곧바로 신고하고 사후 조치를 연계하세요.', source:'중앙노인보호전문기관'},
+
+  {id:'ORG-112', name:'112 경찰', serviceType:'긴급신고', org:'경찰청 112상황실', region:'전국', gu:null,
+   domains:['emergency'],
+   cond:'학대·범죄·안전 위협이 의심되는 위기 상황 (24시간)', apply:'112 즉시 신고, 별도 신청 불요',
+   contact:'112 (24시간)', url:null, checkedDate:'2026-08-24', expireDate:'2027-02-24', regionAvailable:true,
+   recommendText:'범죄·폭력 등 안전 위협이 임박했을 때 즉시 신고하세요.', source:'경찰청 112 신고 안내'},
+
+  {id:'ORG-119', name:'119 소방·구급', serviceType:'긴급신고', org:'소방청 119종합상황실', region:'전국', gu:null,
+   domains:['fall','pain','emergency'],
+   cond:'낙상 후 거동 불가·의식 저하·심한 출혈 등 즉시 구조·응급처치가 필요한 경우 (24시간)', apply:'119 즉시 신고, 별도 신청 불요',
+   contact:'119 (24시간)', url:null, checkedDate:'2026-08-24', expireDate:'2027-02-24', regionAvailable:true,
+   recommendText:'낙상 후 심각 징후가 동반되면 다른 연계보다 먼저 119에 연락하세요.', source:'소방청 119 신고 안내'},
 ];
 
 /* ============================================================
@@ -459,7 +573,7 @@ function splitClauses(text){
     .filter(Boolean);
 }
 
-/* 메모를 5개 핵심 위험영역으로 구조화하는 규칙기반 분석 엔진 (실제 AI 호출 대신 데모용 키워드 매칭) */
+/* 메모를 6개 핵심 위험영역으로 구조화하는 규칙기반 분석 엔진 (실제 AI 호출 대신 데모용 키워드 매칭) */
 function analyzeMemo(memo, baseline){
   const text = memo || '';
   const clauses = splitClauses(text);
@@ -471,20 +585,43 @@ function analyzeMemo(memo, baseline){
     // 이 도메인 키워드가 실제로 등장한 문장(절)만 골라, 그 절 전체를 근거(excerpt)로 쓰고 긍정·부정도 그 범위에서만 판정한다
     const clause = clauses.find(c=>c.includes(hit)) || text;
     const excerpt = clause.trim();
-    const neg = includesAnyGuarded(clause, NEG_WORDS);
-    const pos = includesAnyGuarded(clause, POS_WORDS);
     const timeHit = TIME_WORDS.find(t=>text.includes(t.kw));
     const time = timeHit ? timeHit.label : '최근';
+    if(d.key==='cognition'){
+      // 인지·의사소통 kw 자체가 이미 구체적인 인지 저하 근거 문구(날짜·장소 혼동, 반복 질문 등)이므로,
+      // 단발성 복약 누락과 달리 별도의 긍정·부정어 판정 없이 곧바로 '이상'으로 확정한다.
+      // '약을 깜빡'류 복약 누락은 이 목록에 없으므로 여기서 걸리지 않고 복약 영역에만 남는다.
+      return {domain:d.key,label:d.label,status:'이상',content:d.label+' 저하 신호 관찰',time,excerpt};
+    }
+    const neg = includesAnyGuarded(clause, NEG_WORDS);
+    const pos = includesAnyGuarded(clause, POS_WORDS);
     let status = '미확인';
     let content = d.label+' 관련 언급';
+    let nextQuestion = null;
     if(neg && !pos){ status='이상'; content=d.label+' 어려움 관찰'; }
     else if(pos && !neg){ status='정상'; content=d.label+' 양호'; }
     else if(neg && pos){ status='이상'; content=d.label+' 부분적 어려움'; }
-    else { status='이상'; content=d.label+' 변화 언급'; }
-    return {domain:d.key,label:d.label,status,content,time,excerpt};
+    else {
+      // 정상·이상을 가를 명확한 근거(긍정·부정어)가 없는 경우 임의로 '이상'을 확정하지 않고
+      // 사람이 다음 통화에서 확인하도록 미확인으로 남긴다.
+      status='미확인'; content=d.label+' 언급되었으나 정상·이상 판단 근거 부족';
+      nextQuestion = DOMAIN_NEXT_QUESTION[d.key];
+    }
+    return {domain:d.key,label:d.label,status,content,time,excerpt,nextQuestion};
   });
-  const emergency = includesAny(text, EMERGENCY_WORDS);
-  if(emergency){
+  const wordEmergency = includesAny(text, EMERGENCY_WORDS);
+  const fallEmergency = detectFallEmergency(text);
+  if(fallEmergency){
+    // 낙상 표현 + 심각 징후 조합이 확인된 경우, 별도 카드를 새로 만들지 않고 이미 있는
+    // 낙상·거동 행을 긴급 근거로 갱신한다(낙상 언급 하나만으로는 여기 오지 않는다).
+    const fallRow = rows.find(r=>r.domain==='fall');
+    if(fallRow){
+      fallRow.status='이상';
+      fallRow.content='낙상 후 심각 징후(일어나지 못함·머리 충격·출혈·의식 변화·심한 통증 중 하나 이상) 동반 — 즉시 확인 필요';
+    }
+  }
+  const emergency = wordEmergency || fallEmergency;
+  if(wordEmergency){
     const hitWord = EMERGENCY_WORDS.find(w=>text.includes(w));
     const clause = clauses.find(c=>c.includes(hitWord)) || text;
     const timeHit = TIME_WORDS.find(t=>text.includes(t.kw));
@@ -494,7 +631,7 @@ function analyzeMemo(memo, baseline){
       time: timeHit ? timeHit.label : '최근', excerpt: clause.trim(),
     });
   }
-  return {rows, emergency};
+  return {rows, emergency, fallEmergency};
 }
 
 function classifyChange(domainKey, currentStatus, baseline, priorSignalsForClient){
@@ -669,7 +806,9 @@ const embeddingAnalyzer = {
   key:'embedding', label:'임베딩 분석(AI)',
   async classify(text){
     const clauses = splitClauses(text);
-    const emergency = includesAny(text, EMERGENCY_WORDS);
+    const wordEmergency = includesAny(text, EMERGENCY_WORDS);
+    const fallEmergency = detectFallEmergency(text);
+    const emergency = wordEmergency || fallEmergency;
     const rows = await Promise.all(DOMAINS.map(async d=>{
       const hit = d.kw.find(k=>text.includes(k));
       if(!hit){
@@ -694,7 +833,14 @@ const embeddingAnalyzer = {
         return {...fallbackRow, method:'rule-fallback'};
       }
     }));
-    if(emergency){
+    if(fallEmergency){
+      const fallRow = rows.find(r=>r.domain==='fall');
+      if(fallRow){
+        fallRow.status='이상';
+        fallRow.content='낙상 후 심각 징후(일어나지 못함·머리 충격·출혈·의식 변화·심한 통증 중 하나 이상) 동반 — 즉시 확인 필요';
+      }
+    }
+    if(wordEmergency){
       const hitWord = EMERGENCY_WORDS.find(w=>text.includes(w));
       const clause = clauses.find(c=>c.includes(hitWord)) || text;
       const timeHit = TIME_WORDS.find(t=>text.includes(t.kw));
@@ -702,7 +848,7 @@ const embeddingAnalyzer = {
         content:'자살·자해·화재·학대 등 즉시 확인이 필요한 표현 감지',
         time: timeHit ? timeHit.label : '최근', excerpt: clause.trim(), method:'rule'});
     }
-    return {rows, emergency};
+    return {rows, emergency, fallEmergency};
   },
 };
 
@@ -795,6 +941,52 @@ async function runEmbeddingAccuracyTest(){
   return results;
 }
 
+/* 대상자·위험영역·사건 진행상태를 기준으로 진행 중인(종결되지 않은) 사건이 있는지 먼저 확인한다.
+   있으면 새 카드를 만들지 않고 기존 사건에 누적(반복횟수 증가·최근발견일 갱신·이력 추가·필요시 우선단계 상승)하고,
+   없으면(또는 종결 후 재발이면) 새 사건을 만든다. 정상/미확인으로 정정된 경우 진행 중인 사건이 있으면 종결한다.
+   시연용 더미데이터 생성과 실제 AI 분석 검토 승인 양쪽에서 동일하게 사용해 동작을 일치시킨다. */
+function upsertDomainSignal(signals, p){
+  const openIdx = signals.findIndex(s=>s.clientId===p.clientId && s.domain===p.domain && s.lifecycle!=='종결');
+  const open = openIdx>=0 ? signals[openIdx] : null;
+
+  if(p.isAnomaly){
+    if(open){
+      const repeatCount = (open.repeatCount||1)+1;
+      const updated = {
+        ...open,
+        recordId:p.recordId, currentStatus:p.status, excerpt:p.excerpt, time:p.time, changeType:p.changeType, urgency:p.urgency,
+        analyzerMethod: p.analyzerMethod || open.analyzerMethod, similarity: p.similarity!=null ? p.similarity : open.similarity,
+        aiSuggestedStatus: p.aiSuggestedStatus!=null ? p.aiSuggestedStatus : open.aiSuggestedStatus,
+        repeatCount, lastSeenAt:p.at, reviewedBy:p.reviewedBy, reviewNote:p.reviewNote,
+        deadline: p.urgency==='긴급확인' ? '즉시' : p.urgency==='당일확인' ? isoDaysFromNow(0) : p.urgency==='연계검토' ? isoDaysFromNow(7) : (p.fallbackDeadline || open.deadline),
+        history:[...open.history, {at:p.at, note:'반복 확인('+repeatCount+'회째)'+(p.changeType && p.changeType!=='-' ? ' · 변화 '+p.changeType : '')+' · '+p.reviewNote}],
+      };
+      const next = signals.slice(); next[openIdx]=updated;
+      return {signals:next, note:p.label+' 기존 사건에 누적('+repeatCount+'회째)'};
+    }
+    const created = {
+      id:uid('SIG'), clientId:p.clientId, recordId:p.recordId, domain:p.domain, label:p.label, currentStatus:p.status,
+      excerpt:p.excerpt, time:p.time, changeType:p.changeType, urgency:p.urgency,
+      analyzerMethod:p.analyzerMethod||'rule', similarity: p.similarity!=null?p.similarity:null, aiSuggestedStatus:p.aiSuggestedStatus,
+      repeatCount:1, lastSeenAt:p.at,
+      lifecycle:'검토완료', reviewedBy:p.reviewedBy, reviewNote:p.reviewNote,
+      createdAt:p.at, deadline: p.urgency==='긴급확인' ? '즉시' : p.urgency==='당일확인' ? isoDaysFromNow(0) : p.urgency==='연계검토' ? isoDaysFromNow(7) : (p.fallbackDeadline || isoDaysFromNow(7)),
+      history:[{at:p.at, note:p.reviewNote}],
+    };
+    return {signals:[...signals, created], note:p.label+' 새 사건 생성'};
+  }
+
+  if(open){
+    const closeNote = p.status==='정상' ? '호전 확인'
+      : p.decision==='기각' ? 'AI 제안 기각 — 담당자 확인 결과 반영 안 함'
+      : '재확인 필요(미확인) — 담당자 확인 후 종결';
+    const updated = {...open, lifecycle:'종결', reviewNote:closeNote, history:[...open.history, {at:p.at, note:closeNote}]};
+    const next = signals.slice(); next[openIdx]=updated;
+    return {signals:next, note:p.label+' 기존 사건 종결('+closeNote+')'};
+  }
+  return {signals, note:null};
+}
+
 /* ============================================================
    초기 시연 데이터 (가상 인물 · 더미데이터, 실사용자 아님)
    ============================================================ */
@@ -829,7 +1021,7 @@ function buildSeed(){
   ];
 
   const records = [];
-  const signals = [];
+  let signals = [];
   const referrals = [];
   const audit = [];
 
@@ -847,15 +1039,15 @@ function buildSeed(){
     rows.forEach(r=>{ r.changeType = classifyChange(r.domain, r.status, baseline, priorSignalsForClient.filter(s=>s.recordId!==rec.id)); });
     const urgency = suggestUrgency(rows, emergency);
     rows.forEach(r=>{
-      if(r.status==='이상' || (r.changeType && r.changeType!=='-')){
-        signals.push({
-          id:uid('SIG'), clientId, recordId:rec.id, domain:r.domain, label:r.label, currentStatus:r.status,
-          excerpt:r.excerpt, time:r.time, changeType:r.changeType, urgency,
-          lifecycle:'검토완료', reviewedBy:'전담사회복지사 이○○', reviewNote:'AI 제안 확인 후 원문 근거로 승인',
-          createdAt:dt, deadline: urgency==='긴급확인' ? '즉시' : urgency==='당일확인' ? isoDaysFromNow(0) : urgency==='연계검토' ? isoDaysFromNow(7) : rec.nextCheckDate,
-          history:[{at:dt, note:'AI 구조화 + 담당자 승인'}],
-        });
-      }
+      const isAnomaly = r.status==='이상';
+      if(!isAnomaly && !(r.changeType && r.changeType!=='-')) return;
+      const result = upsertDomainSignal(signals, {
+        clientId, recordId:rec.id, domain:r.domain, label:r.label, isAnomaly, status:r.status,
+        excerpt:r.excerpt, time:r.time, changeType:r.changeType, urgency,
+        reviewedBy:'전담사회복지사 이○○', reviewNote:'AI 제안 확인 후 원문 근거로 승인',
+        at:dt, fallbackDeadline:rec.nextCheckDate,
+      });
+      signals = result.signals;
     });
     pushLog(managerNameFor(clientId),'안부기록 저장', method+' 상담, 대상자 '+clientId);
     return {rec, rows, urgency};
@@ -873,9 +1065,9 @@ function buildSeed(){
     sigEmergency.lifecycle='조치중';
     sigEmergency.reviewNote='자살 암시 표현으로 규칙 기반 즉시 알림. 전담사회복지사가 즉시 재연락하여 상태 확인, 109 안내 및 방문 예정.';
     pushLog('전담사회복지사 이○○','긴급 신호 즉시 확인','109/정신건강복지센터 안내, 재연락 완료');
-    referrals.push({id:uid('REF'), clientId:'C-2', signalId:sigEmergency.id, policyId:'P-04', reason:'자살 암시 표현 확인, 24시간 상담채널 우선 연결',
+    referrals.push({id:uid('REF'), clientId:'C-2', signalId:sigEmergency.id, policyId:'ORG-109', reason:'자살 암시 표현 확인, 24시간 상담채널 우선 연결',
       status:'접수', consentDate:isoDaysAgo(2), nextReviewDate:isoDaysFromNow(1), outcome:'', history:[{at:isoDaysAgo(2)+'T15:00:00', note:'109 안내 및 정신건강복지센터 연계 접수'}]});
-    referrals.push({id:uid('REF'), clientId:'C-2', signalId:sigEmergency.id, policyId:'P-03', reason:'우울·고립 정서 지원을 위한 지역센터 상담 연계',
+    referrals.push({id:uid('REF'), clientId:'C-2', signalId:sigEmergency.id, policyId:'ORG-MENTAL-namgu', reason:'우울·고립 정서 지원을 위한 지역센터 상담 연계',
       status:'대기', consentDate:isoDaysAgo(2), nextReviewDate:isoDaysFromNow(2), outcome:'', history:[{at:isoDaysAgo(1)+'T11:00:00', note:'센터 상담 일정 조율 중'}]});
   }
 
@@ -1447,7 +1639,9 @@ function AnalysisReview({state, setState, setNav, recordId, role}){
   const [analyzing, setAnalyzing] = useState(false);
   const [usedFallback, setUsedFallback] = useState(false);
   const [note, setNote] = useState('');
-  const emergency = rec ? includesAny(rec.memo||'', EMERGENCY_WORDS) : false;
+  const wordEmergency = rec ? includesAny(rec.memo||'', EMERGENCY_WORDS) : false;
+  const fallEmergency = rec ? detectFallEmergency(rec.memo||'') : false;
+  const emergency = wordEmergency || fallEmergency;
 
   useEffect(()=>{
     if(!rec) return;
@@ -1469,14 +1663,22 @@ function AnalysisReview({state, setState, setNav, recordId, role}){
       }
       if(cancelled) return;
       const withChange = result.rows.map(r=>({...r, changeType: classifyChange(r.domain, r.status, baseline, priorSignalsForClient)}));
-      const decided = withChange.map(r=>({...r, decision: r.status==='이상' ? '승인' : 'skip'}));
+      // aiStatus: AI가 최초로 제안한 값. 담당자가 이후 status를 수정해도 이 값은 바꾸지 않고
+      // 그대로 감사 이력·화면에 "AI 최초 제안 → 담당자 수정"으로 남긴다.
+      const decided = withChange.map(r=>({...r, aiStatus:r.status, decision: r.status==='이상' ? '승인' : 'skip'}));
       setRows(decided);
-      setUrgency(suggestUrgency(decided, result.emergency));
       setUsedFallback(fellBack);
       setAnalyzing(false);
     })();
     return ()=>{ cancelled = true; };
   }, [analyzerKey, engineState.status, recordId]);
+
+  // 담당자가 개별 영역 상태를 수정할 때마다(setStatus) rows가 바뀌므로, 우선확인 단계도
+  // 항상 "현재 화면에 보이는 최종 상태" 기준으로 다시 계산해 대시보드에 반영될 값과 어긋나지 않게 한다.
+  useEffect(()=>{
+    if(!rows) return;
+    setUrgency(suggestUrgency(rows, emergency));
+  }, [rows, emergency]);
 
   if(!rec) return <Empty>기록을 찾을 수 없습니다.</Empty>;
 
@@ -1487,22 +1689,47 @@ function AnalysisReview({state, setState, setNav, recordId, role}){
     setRows(rs=>rs.map(r=>r.domain===domain?{...r,decision}:r));
   }
   function setStatus(domain, status){
-    setRows(rs=>rs.map(r=>r.domain===domain?{...r,status}:r));
+    setRows(rs=>rs.map(r=>{
+      if(r.domain!==domain) return r;
+      const changeType = classifyChange(r.domain, status, baseline, priorSignalsForClient);
+      // 상태를 바꾸면 승인 여부도 그 상태에 맞게 다시 정한다: '이상'이면 기본 승인 대상,
+      // 그 외(정상·미확인)는 위험신호를 만들 대상이 아니므로 skip.
+      const decision = status==='이상' ? '승인' : 'skip';
+      const nextQuestion = status==='미확인' ? (r.nextQuestion || DOMAIN_NEXT_QUESTION[r.domain] || null) : null;
+      return {...r, status, changeType, decision, nextQuestion};
+    }));
   }
 
   function approve(){
-    const toCreate = rows.filter(r=>r.decision==='승인' && (r.status==='이상' || (r.changeType && r.changeType!=='-')));
-    const newSignals = toCreate.map(r=>({
-      id:uid('SIG'), clientId:rec.clientId, recordId:rec.id, domain:r.domain, label:r.label, currentStatus:r.status,
-      excerpt:r.excerpt, time:r.time, changeType:r.changeType, urgency,
-      analyzerMethod: r.method || 'rule', similarity: r.similarity!=null ? r.similarity : null,
-      lifecycle:'검토완료', reviewedBy:'전담사회복지사(현재 세션)', reviewNote: note || 'AI 제안 확인 후 승인',
-      createdAt:new Date().toISOString(),
-      deadline: urgency==='긴급확인' ? '즉시' : urgency==='당일확인' ? isoDaysFromNow(0) : urgency==='연계검토' ? isoDaysFromNow(7) : rec.nextCheckDate,
-      history:[{at:new Date().toISOString(), note:'담당자 승인: '+(note||'사유 미기재')}],
-    }));
-    setState(s=>({...s, signals:[...s.signals, ...newSignals],
-      audit:[...s.audit, {id:uid('LOG'), at:new Date().toISOString(), actor:'전담사회복지사', action:'AI 분석 검토·승인', detail:client.caseNo+' · '+newSignals.length+'건 신호 생성'}]}));
+    const now = new Date().toISOString();
+    let signals = state.signals;
+    const changeLog = [];
+
+    rows.forEach(r=>{
+      // 이번 통화에서 언급조차 안 된 영역(미확인, AI 제안에서 손대지 않음)은 완전히 건드리지 않는다.
+      // 그런 영역까지 매번 훑으면 이번 통화와 무관한 다른 영역의 진행 중인 사건을 잘못 종결시키게 된다.
+      const touched = r.status==='이상' || r.aiStatus!==r.status;
+      if(!touched) return;
+      const isAnomaly = r.status==='이상' && r.decision==='승인';
+      // 대상자·위험영역 기준으로 진행 중인 사건이 있으면(같은 기록 재검토 포함) 새 카드 대신 누적한다.
+      const result = upsertDomainSignal(signals, {
+        clientId:rec.clientId, recordId:rec.id, domain:r.domain, label:r.label, isAnomaly, status:r.status, decision:r.decision,
+        excerpt:r.excerpt, time:r.time, changeType:r.changeType, urgency,
+        analyzerMethod: r.method || 'rule', similarity: r.similarity!=null ? r.similarity : null, aiSuggestedStatus: r.aiStatus,
+        reviewedBy:'전담사회복지사(현재 세션)', reviewNote: note || 'AI 제안 확인 후 승인',
+        at:now, fallbackDeadline: rec.nextCheckDate,
+      });
+      signals = result.signals;
+      if(result.note){
+        changeLog.push(result.note
+          +(r.aiStatus!==r.status ? ' (AI 제안 '+r.aiStatus+' → 담당자 수정 '+r.status+')' : '')
+          +(!isAnomaly && r.status==='미확인' && r.nextQuestion ? ' · 다음 통화 질문: '+r.nextQuestion : ''));
+      }
+    });
+
+    setState(s=>({...s, signals,
+      audit:[...s.audit, {id:uid('LOG'), at:now, actor:'전담사회복지사', action:'AI 분석 검토·승인',
+        detail:client.caseNo+(changeLog.length?' · '+changeLog.join(' / '):' · 변경 없음')}]}));
     setNav({screen:'client', params:{id:rec.clientId}});
   }
 
@@ -1516,8 +1743,12 @@ function AnalysisReview({state, setState, setNav, recordId, role}){
   return (
     <div>
       <div className="section-head"><h2>{client ? client.alias : ''} · AI 분석 검토</h2></div>
-      {emergency && <div className="disclaimer" style={{background:'var(--danger-soft)', borderColor:'var(--danger)'}}>
+      {wordEmergency && <div className="disclaimer" style={{background:'var(--danger-soft)', borderColor:'var(--danger)'}}>
         ⚠ 긴급 표현이 감지되었습니다. 자살·자해·화재·학대 의심 등 표현은 규칙 기반으로 즉시 상향 알림됩니다. 담당자가 즉시 원문을 확인하세요.
+      </div>}
+      {fallEmergency && <div className="disclaimer" style={{background:'var(--danger-soft)', borderColor:'var(--danger)'}}>
+        ⚠ 낙상 후 심각 징후(일어나지 못함·머리 충격·출혈·의식 변화·심한 통증 중 하나 이상)가 함께 감지되었습니다.
+        이 상황은 일반 기관 연계 절차와 별도로, 기관의 위기대응 지침에 따라 담당자가 즉시 대응하세요. 필요 시 119(소방·구급) 또는 112(경찰)에 즉시 연락하세요.
       </div>}
       <div className="two-col">
         <div className="card">
@@ -1552,9 +1783,9 @@ function AnalysisReview({state, setState, setNav, recordId, role}){
             <textarea value={note} onChange={e=>setNote(e.target.value)} placeholder="AI 제안에 대한 승인·수정·기각 사유를 남겨주세요."/>
           </div>
           {!canApprove && <p className="small" style={{marginTop:8}}>생활지원사는 이 화면에서 직접 승인할 수 없습니다. 확인한 내용을 담당 전담사회복지사에게 전달해 주세요.</p>}
-          {alreadySignaled && <p className="small" style={{marginTop:8, color:'var(--warn)'}}>이 기록은 이미 검토·승인되었습니다.</p>}
+          {alreadySignaled && <p className="small" style={{marginTop:8, color:'var(--warn)'}}>이 기록은 이미 검토·승인되었습니다. 다시 승인하면 지금 화면의 최종 상태로 위험신호가 갱신됩니다.</p>}
           <div style={{marginTop:14}}>
-            <button className="btn btn--primary" disabled={!canApprove || alreadySignaled || !rows} onClick={approve}>검토 결과 승인 · 신호 생성</button>
+            <button className="btn btn--primary" disabled={!canApprove || !rows} onClick={approve}>{alreadySignaled ? '검토 결과 재승인 · 신호 갱신' : '검토 결과 승인 · 신호 생성'}</button>
           </div>
         </div>
 
@@ -1573,8 +1804,14 @@ function AnalysisReview({state, setState, setNav, recordId, role}){
                 </div>
               </div>
               <div className="small" style={{marginTop:4}}>{r.content} · 시점 {r.time} · 변화 {r.changeType && r.changeType!=='-' ? r.changeType : '해당없음'}</div>
+              {r.aiStatus && r.aiStatus!==r.status && (
+                <div className="small" style={{marginTop:2, color:'var(--warn)'}}>AI 최초 제안: {r.aiStatus} → 담당자 수정: {r.status}</div>
+              )}
               {methodLabel(r) && <div className="small" style={{marginTop:2, color:'var(--info)'}}>{methodLabel(r)}</div>}
               <div className="pc-excerpt" style={{marginTop:6}}>{r.excerpt}</div>
+              {r.status==='미확인' && r.nextQuestion && (
+                <div className="small" style={{marginTop:4, color:'var(--info)'}}>다음 통화 확인 질문: {r.nextQuestion}</div>
+              )}
               {r.status==='이상' && (
                 <div className="seg" style={{marginTop:6, maxWidth:220}}>
                   <button className={r.decision==='승인'?'on':''} onClick={()=>setDecision(r.domain,'승인')}>승인</button>
@@ -1645,9 +1882,14 @@ function SignalDetail({state, setState, setNav, id, role}){
   if(!s) return <Empty>신호를 찾을 수 없습니다.</Empty>;
   const client = state.clients.find(c=>c.id===s.clientId);
   const canAct = role!=='생활지원사';
-  const matches = POLICY_SEED.filter(p=>p.domains.includes(s.domain));
+  const clientGu = regionToGu(client && client.region);
+  // 구별 기관(보건소·치매안심센터·정신건강복지센터 등)은 대상자 주소의 관할 구와 일치할 때만 보여준다.
+  const matches = POLICY_SEED.filter(p=>p.domains.includes(s.domain) && (!p.gu || p.gu===clientGu));
   const clientReferrals = state.referrals.filter(r=>r.signalId===s.id);
   const [reasonDraft, setReasonDraft] = useState('');
+  // 기관 연계(정책·서비스 의뢰) 동의가 없으면 연계 후보 생성·개인정보 포함 연계정보 전송을 막는다.
+  const agencyConsentOk = !!(client && client.consents && client.consents.agency);
+  const isEmergency = s.urgency==='긴급확인';
 
   function setLifecycle(v){
     setState(st=>({...st, signals: st.signals.map(x=>x.id===id?{...x, lifecycle:v, history:[...x.history,{at:new Date().toISOString(), note:'상태 변경 → '+v}]}:x)}));
@@ -1656,6 +1898,7 @@ function SignalDetail({state, setState, setNav, id, role}){
     setState(st=>({...st, signals: st.signals.map(x=>x.id===id?{...x, lifecycle:'종결', reviewNote:reason, history:[...x.history,{at:new Date().toISOString(), note:'종결: '+reason}]}:x)}));
   }
   function createReferral(policy){
+    if(!agencyConsentOk) return; // 방어: 버튼 비활성화와 무관하게 동의 없이는 연계정보를 생성하지 않는다
     const ref = {id:uid('REF'), clientId:s.clientId, signalId:s.id, policyId:policy.id, reason:reasonDraft || (policy.name+' 적합 영역: '+s.label),
       status:'검토후보', consentDate:'', nextReviewDate:isoDaysFromNow(7), outcome:'', history:[{at:new Date().toISOString(), note:'연계 검토 후보 생성'}]};
     setState(st=>({...st, referrals:[...st.referrals, ref]}));
@@ -1667,6 +1910,10 @@ function SignalDetail({state, setState, setNav, id, role}){
   return (
     <div>
       <div className="section-head"><h2>{client?client.alias:''} · {s.label} 신호 상세</h2></div>
+      {isEmergency && <div className="disclaimer" style={{background:'var(--danger-soft)', borderColor:'var(--danger)'}}>
+        ⚠ 긴급확인 신호입니다. 아래 일반 기관 연계 절차와 별도로, 기관의 위기대응 지침에 따라 담당자가 즉시 대응하세요.
+        필요 시 119(소방·구급) 또는 112(경찰)에 즉시 연락하세요.
+      </div>}
       <div className="two-col">
         <div className="card">
           <div style={{display:'flex', gap:8, marginBottom:10}}>
@@ -1675,6 +1922,7 @@ function SignalDetail({state, setState, setNav, id, role}){
           </div>
           <div className="pc-excerpt" style={{marginBottom:10}}>{s.excerpt}</div>
           <div className="kv"><span className="k">시점</span><span>{s.time}</span></div>
+          {s.repeatCount>1 && <div className="kv"><span className="k">반복 횟수</span><span>{s.repeatCount}회 (같은 위험영역 진행 중 사건에 누적, 최근 발견일 {fmtDateTime(s.lastSeenAt||s.createdAt)})</span></div>}
           {s.analyzerMethod && <div className="kv"><span className="k">분석 방식</span><span>{
             s.analyzerMethod==='embedding' ? '임베딩 분석(AI) · 유사도 '+(s.similarity!=null?s.similarity.toFixed(2):'-')
             : s.analyzerMethod==='rule-fallback' ? '규칙 기반 폴백'
@@ -1712,14 +1960,29 @@ function SignalDetail({state, setState, setNav, id, role}){
         <div className="card">
           <div className="dl" style={{fontWeight:600, marginBottom:8, fontSize:13}}>정책·기관 연계 후보</div>
           <p className="small" style={{marginBottom:10}}>'신청 가능'이 아닌 '연계 검토 후보'로 표시합니다. 지역 가용성은 별도 확인이 필요합니다.</p>
+          {!agencyConsentOk && (
+            <div className="disclaimer" style={{marginBottom:10}}>
+              기관 연계 동의가 확인되지 않아 연계를 진행할 수 없습니다.
+              <div style={{marginTop:8, display:'flex', gap:8}}>
+                <button className="btn btn--sm" onClick={()=>setNav({screen:'client', params:{id:s.clientId}})}>동의 확인</button>
+                <button className="btn btn--sm" disabled={!canAct} onClick={()=>setNav({screen:'client', params:{id:s.clientId}})}>동의 정보 수정</button>
+              </div>
+            </div>
+          )}
           {matches.map(p=>(
             <div key={p.id} style={{padding:'10px 0', borderBottom:'1px solid var(--line)'}}>
               <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:8}}>
-                <div><strong style={{fontSize:12.5}}>{p.name}</strong><div className="small">{p.org} · {p.region}</div></div>
-                <button className="btn btn--sm" disabled={!canAct} onClick={()=>createReferral(p)}>연계 후보로 추가</button>
+                <div><strong style={{fontSize:12.5}}>{p.name}</strong><div className="small">{p.serviceType} · 담당 지역 {p.region}</div></div>
+                <button className="btn btn--sm" disabled={!canAct || !agencyConsentOk} onClick={()=>createReferral(p)}>연계 후보로 추가</button>
               </div>
-              <div className="small" style={{marginTop:4}}>대상조건: {p.cond}</div>
-              <div className="small">연락처: {p.contact} · 출처: {p.source} (확인일 {fmtDate(p.date)})</div>
+              {p.recommendText && <div className="small" style={{marginTop:4, color:'var(--info)'}}>추천 이유: {p.recommendText}</div>}
+              <div className="small" style={{marginTop:2}}>대상조건: {p.cond}</div>
+              <div className="small" style={{marginTop:2}}>
+                전화번호: {p.contact || '확인 필요(담당기관 문의)'}
+                {p.url ? <> · <a href={p.url} target="_blank" rel="noreferrer" className="btn btn--sm" style={{marginLeft:4, display:'inline-block'}}>공식 홈페이지</a></> : <span> · 공식 홈페이지: 확인 필요</span>}
+              </div>
+              <div className="small" style={{marginTop:2}}>정보 확인일 {fmtDate(p.checkedDate)} · 지역 가용 여부: {p.regionAvailable ? '가능' : '확인 필요'}</div>
+              <div className="small" style={{marginTop:2, color:'var(--warn)'}}>신청 가능 여부는 담당기관 확인 필요</div>
             </div>
           ))}
           {matches.length===0 && <p className="small">매칭되는 정책이 없습니다.</p>}
@@ -1752,13 +2015,18 @@ function SignalDetail({state, setState, setNav, id, role}){
 /* ============================================================
    화면 10. 대상자 프로필(타임라인)
    ============================================================ */
-function ClientProfile({state, setNav, id, role}){
+function ClientProfile({state, setState, setNav, id, role}){
   const client = state.clients.find(c=>c.id===id);
   if(!client) return <Empty>대상자를 찾을 수 없습니다.</Empty>;
   const baseline = state.baselines.find(b=>b.clientId===id);
   const records = state.records.filter(r=>r.clientId===id).sort((a,b)=>b.datetime.localeCompare(a.datetime));
   const signals = state.signals.filter(s=>s.clientId===id);
   const referrals = state.referrals.filter(r=>r.clientId===id);
+  const canEditConsent = role!=='생활지원사';
+  function toggleConsent(key){
+    setState(st=>({...st, clients: st.clients.map(c=>c.id===id?{...c, consents:{...c.consents, [key]:!c.consents[key]}}:c),
+      audit:[...st.audit, {id:uid('LOG'), at:new Date().toISOString(), actor:'전담사회복지사', action:'동의 정보 수정', detail:client.caseNo+' · '+({ai:'AI분석',agency:'기관연계',relative:'관계인연락'}[key])+' 동의 '+(!client.consents[key]?'설정':'해제')}]}));
+  }
 
   const events = [
     {at:client.registeredAt+'T09:00:00', type:'등록', title:'신규 대상자 등록', body:'사례번호 '+client.caseNo},
@@ -1786,7 +2054,15 @@ function ClientProfile({state, setNav, id, role}){
             <div className="kv"><span className="k">지역</span><span>{client.region}</span></div>
             <div className="kv"><span className="k">담당자</span><span>{(state.caseworkers.find(w=>w.id===client.managerId)||{}).name || '미배정'}</span></div>
             <div className="kv"><span className="k">연락</span><span>{client.contactPref} · {client.contactHours}</span></div>
-            <div className="kv"><span className="k">동의</span><span>{Object.entries(client.consents).filter(([k,v])=>v).map(([k])=>({ai:'AI분석',agency:'기관연계',relative:'관계인연락'}[k])).join(', ')||'없음'}</span></div>
+          </div>
+
+          <div className="card" style={{marginBottom:16}}>
+            <div className="dl" style={{fontWeight:600, marginBottom:8, fontSize:13}}>동의 확인·수정</div>
+            <label className="checkline"><input type="checkbox" checked={!!client.consents.ai} disabled={!canEditConsent} onChange={()=>toggleConsent('ai')}/> AI 분석(기록 구조화·변화 비교) 동의</label>
+            <label className="checkline"><input type="checkbox" checked={!!client.consents.agency} disabled={!canEditConsent} onChange={()=>toggleConsent('agency')}/> 외부기관 연계(정책·서비스 의뢰) 동의</label>
+            <label className="checkline"><input type="checkbox" checked={!!client.consents.relative} disabled={!canEditConsent} onChange={()=>toggleConsent('relative')}/> 관계인 연락(보호자·이웃) 동의</label>
+            {!client.consents.agency && <p className="small" style={{marginTop:6, color:'var(--warn)'}}>기관 연계 동의가 없어 이 대상자는 연계 후보 생성·연계정보 전송이 제한됩니다.</p>}
+            {!canEditConsent && <p className="small" style={{marginTop:6}}>생활지원사 역할은 동의 정보를 수정할 수 없습니다.</p>}
           </div>
 
           {baseline && (
@@ -1822,22 +2098,62 @@ function ClientProfile({state, setNav, id, role}){
    화면 11. 정책·기관 DB
    ============================================================ */
 function PolicyDB({state}){
+  const [guFilter, setGuFilter] = useState('전체');
+  const guOptions = ['전체', ...GU_LIST.map(g=>g.label), '전남 광주 전역', '전국'];
+  const filtered = POLICY_SEED.filter(p=>{
+    if(guFilter==='전체') return true;
+    if(guFilter==='전남 광주 전역') return !p.gu && p.region==='전남 광주 전역';
+    if(guFilter==='전국') return !p.gu && p.region==='전국';
+    const g = GU_LIST.find(x=>x.label===guFilter);
+    return g && p.gu===g.key;
+  });
+
+  const byRegion = {};
+  POLICY_SEED.forEach(p=>{ byRegion[p.region]=(byRegion[p.region]||0)+1; });
+  const noUrl = POLICY_SEED.filter(p=>!p.url);
+
   return (
     <div>
       <div className="section-head"><h2>정책·기관 DB</h2><span className="count">{POLICY_SEED.length}건</span></div>
+
+      <div className="card" style={{marginBottom:16}}>
+        <div className="dl" style={{fontWeight:600, marginBottom:8, fontSize:13}}>등록 현황 요약</div>
+        <div className="kv"><span className="k">등록된 전체 기관 수</span><span className="mono">{POLICY_SEED.length}건</span></div>
+        <div className="kv"><span className="k">지역별 기관 수</span><span>{Object.entries(byRegion).map(([r,n])=>r+' '+n+'건').join(' · ')}</span></div>
+        <div className="kv"><span className="k">홈페이지 링크 없는 기관</span><span className="mono">{noUrl.length}건</span></div>
+        {noUrl.length>0 && (
+          <p className="small" style={{marginTop:6, color:'var(--warn)'}}>
+            {noUrl.map(p=>p.name).join(', ')} — 공식 홈페이지·실제 연락처는 임의로 만들지 않고 비워두었습니다. 확인되는 대로 채워 넣어야 합니다.
+          </p>
+        )}
+      </div>
+
+      <div className="field" style={{marginBottom:12, maxWidth:280}}>
+        <label>담당 지역 필터</label>
+        <select value={guFilter} onChange={e=>setGuFilter(e.target.value)}>
+          {guOptions.map(o=>(<option key={o} value={o}>{o}</option>))}
+        </select>
+      </div>
+
       <div className="table-wrap">
         <table>
-          <thead><tr><th>정책·기관</th><th>연결 위험영역</th><th>대상조건</th><th>연락처</th><th>출처 · 확인일</th></tr></thead>
+          <thead><tr><th>기관·정책 공식명</th><th>서비스 구분</th><th>연결 위험영역</th><th>담당 지역</th><th>대상조건</th><th>신청방법</th><th>연락처</th><th>공식 홈페이지</th><th>정보 확인일 · 만료일</th><th>지역 가용</th></tr></thead>
           <tbody>
-            {POLICY_SEED.map(p=>(
+            {filtered.map(p=>(
               <tr key={p.id}>
-                <td>{p.name}<div className="small">{p.org} · {p.region}</div></td>
+                <td>{p.name}<div className="small">{p.org}</div></td>
+                <td>{p.serviceType}</td>
                 <td>{p.domains.map(k=>DOMAIN_MAP[k]?.label).filter(Boolean).join(', ')}</td>
+                <td>{p.region}</td>
                 <td>{p.cond}</td>
-                <td>{p.contact}</td>
-                <td>{p.source}<div className="small mono">{fmtDate(p.date)}</div></td>
+                <td>{p.apply}</td>
+                <td>{p.contact || '확인 필요'}</td>
+                <td>{p.url ? <a href={p.url} target="_blank" rel="noreferrer">바로가기</a> : '확인 필요'}</td>
+                <td className="small mono">{fmtDate(p.checkedDate)} ~ {fmtDate(p.expireDate)}</td>
+                <td>{p.regionAvailable ? '가능' : '확인 필요'}</td>
               </tr>
             ))}
+            {filtered.length===0 && <tr><td colSpan="10"><Empty>해당 지역에 등록된 기관이 없습니다.</Empty></td></tr>}
           </tbody>
         </table>
       </div>
@@ -1913,7 +2229,7 @@ function EmbeddingAccuracyPanel(){
   );
 }
 
-function AdminStats({state}){
+function AdminStats({state, setState, setNav}){
   const openSignals = state.signals.filter(s=>s.lifecycle!=='종결');
   const overdue = openSignals.filter(s=>{ if(s.deadline==='즉시') return s.lifecycle==='신규'; const du=daysUntil(s.deadline); return du!==null && du<0; });
   const closedFalse = state.signals.filter(s=>s.lifecycle==='종결' && (s.reviewNote||'').includes('오탐'));
@@ -1921,6 +2237,15 @@ function AdminStats({state}){
   state.signals.forEach(s=>{ byDomain[s.label]=(byDomain[s.label]||0)+1; });
   const domainRows = Object.entries(byDomain).sort((a,b)=>b[1]-a[1]);
   const referralDone = state.referrals.filter(r=>r.status==='완료').length;
+
+  // 데모 데이터 초기화 — 시연/관리자 화면 전용. 실제 운영 사용자 화면(오늘의 업무 등)에는 노출하지 않는다.
+  function resetDemoData(){
+    const ok = window.confirm('데모 데이터를 초기 상태로 되돌리시겠습니까? 현재 변경한 내용은 삭제됩니다.');
+    if(!ok) return;
+    try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
+    setState(buildSeed());
+    setNav({screen:'dashboard'});
+  }
 
   return (
     <div>
@@ -1933,6 +2258,12 @@ function AdminStats({state}){
       </div>
 
       <EmbeddingAccuracyPanel/>
+
+      <div className="card" style={{marginBottom:24}}>
+        <div className="dl" style={{fontWeight:600, marginBottom:8, fontSize:13}}>데모 데이터 관리</div>
+        <p className="small" style={{marginBottom:10}}>시연 중 변경한 내용을 지우고 최초 더미데이터 상태로 되돌립니다. 실제 운영 화면에는 노출되지 않는 관리자·데모 전용 기능입니다.</p>
+        <button className="btn btn--sm" onClick={resetDemoData}>데모 데이터 초기화</button>
+      </div>
 
       <div className="section-head"><h2>위험영역별 경고 추세</h2></div>
       <div className="table-wrap" style={{marginBottom:24}}>
@@ -2006,7 +2337,7 @@ function App(){
   let body = null;
   if(nav.screen==='dashboard') body = <Dashboard state={scopedState} setNav={setNav} role={role}/>;
   else if(nav.screen==='clients') body = <ClientList state={scopedState} setNav={setNav} query={query}/>;
-  else if(nav.screen==='client') body = <ClientProfile state={state} setNav={setNav} id={nav.params.id} role={role}/>;
+  else if(nav.screen==='client') body = <ClientProfile state={state} setState={setState} setNav={setNav} id={nav.params.id} role={role}/>;
   else if(nav.screen==='newClient') body = <NewClientWizard state={state} setState={setState} setNav={setNav} currentCaseworkerId={currentCaseworkerId}/>;
   else if(nav.screen==='baseline') body = <BaselineForm state={state} setState={setState} setNav={setNav} clientId={nav.params.clientId} isNew={nav.params.isNew}/>;
   else if(nav.screen==='checkin') body = <CheckinForm state={state} setState={setState} setNav={setNav} clientId={nav.params.clientId} currentCaseworkerId={currentCaseworkerId}/>;
@@ -2014,7 +2345,7 @@ function App(){
   else if(nav.screen==='priority') body = <PriorityDashboard state={scopedState} setNav={setNav}/>;
   else if(nav.screen==='signal') body = <SignalDetail state={state} setState={setState} setNav={setNav} id={nav.params.id} role={role}/>;
   else if(nav.screen==='policies') body = <PolicyDB state={state}/>;
-  else if(nav.screen==='admin') body = <AdminStats state={state}/>;
+  else if(nav.screen==='admin') body = <AdminStats state={state} setState={setState} setNav={setNav}/>;
 
   return (
     <div className="app-shell">
