@@ -412,12 +412,9 @@ function analyzeMemo(memo, baseline){
     if(!hit){
       return {domain:d.key,label:d.label,status:'미확인',content:'이번 통화·방문에서 확인되지 않음',time:'-',excerpt:'원문 없음'};
     }
-    const idx = text.indexOf(hit);
-    const start = Math.max(0, idx-9);
-    const end = Math.min(text.length, idx+hit.length+9);
-    const excerpt = text.slice(start,end).trim();
-    // 이 도메인 키워드가 실제로 등장한 문장(절)만 골라 그 범위에서 긍정·부정을 판정한다
+    // 이 도메인 키워드가 실제로 등장한 문장(절)만 골라, 그 절 전체를 근거(excerpt)로 쓰고 긍정·부정도 그 범위에서만 판정한다
     const clause = clauses.find(c=>c.includes(hit)) || text;
+    const excerpt = clause.trim();
     const neg = includesAny(clause, NEG_WORDS);
     const pos = includesAny(clause, POS_WORDS);
     const timeHit = TIME_WORDS.find(t=>text.includes(t.kw));
@@ -433,14 +430,12 @@ function analyzeMemo(memo, baseline){
   const emergency = includesAny(text, EMERGENCY_WORDS);
   if(emergency){
     const hitWord = EMERGENCY_WORDS.find(w=>text.includes(w));
-    const idx = text.indexOf(hitWord);
-    const start = Math.max(0, idx-9);
-    const end = Math.min(text.length, idx+hitWord.length+9);
+    const clause = clauses.find(c=>c.includes(hitWord)) || text;
     const timeHit = TIME_WORDS.find(t=>text.includes(t.kw));
     rows.push({
       domain:'emergency', label:'긴급 표현', status:'이상',
       content:'자살·자해·화재·학대 등 즉시 확인이 필요한 표현 감지',
-      time: timeHit ? timeHit.label : '최근', excerpt: text.slice(start,end).trim(),
+      time: timeHit ? timeHit.label : '최근', excerpt: clause.trim(),
     });
   }
   return {rows, emergency};
@@ -570,7 +565,7 @@ function buildSeed(){
   return {clients, caseworkers, baselines, records, signals, referrals, policies: POLICY_SEED.slice(), audit, seededAt:new Date().toISOString()};
 }
 
-const STORAGE_KEY = 'ongicheck-mvp-state-v3';
+const STORAGE_KEY = 'ongicheck-mvp-state-v4';
 function loadState(){
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
