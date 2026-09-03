@@ -1,3 +1,5 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>잘한다잘한다</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <style>
@@ -110,6 +112,18 @@ a{color:var(--teal);}
 .role-switch select{
   background:#1F4548;border:1px solid #2F5D5F;color:#EFEAE0;border-radius:8px;padding:7px 9px;width:100%;
 }
+.role-switch input[type=text]{
+  background:#1F4548;border:1px solid #2F5D5F;color:#EFEAE0;border-radius:8px;padding:6px 8px;width:100%;font-size:12.5px;
+}
+.side-btn{
+  align-self:flex-start;background:transparent;border:1px solid #3C6664;color:#CBD9D6;border-radius:6px;
+  padding:4px 9px;font-size:11px;cursor:pointer;
+}
+.side-btn:hover{border-color:#5A8482;color:#F7F1E6;}
+.side-btn.primary{background:#2C5F63;border-color:#2C5F63;color:#fff;}
+.side-rename{display:flex;flex-direction:column;gap:6px;}
+.side-actions{display:flex;gap:6px;}
+.side-hint{font-size:10px;color:#7E9997;margin:2px 0 0;line-height:1.4;}
 .nav{display:flex;flex-direction:column;gap:2px;margin-top:4px;}
 .nav-item{
   display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:9px;
@@ -308,6 +322,14 @@ const DOMAINS = [
 ];
 const DOMAIN_MAP = Object.fromEntries(DOMAINS.map(d=>[d.key,d]));
 
+/* 생활지원사 4명 — 담당자는 로그인 없이 화면에서 본인을 직접 선택한다. 이름은 언제든 바꿔쓸 수 있다. */
+const CASEWORKER_SEED = [
+  {id:'W-1', name:'생활지원사 정○○'},
+  {id:'W-2', name:'생활지원사 박○○'},
+  {id:'W-3', name:'생활지원사 김○○'},
+  {id:'W-4', name:'생활지원사 이○○'},
+];
+
 const NEG_WORDS = ['없','못','안 ','않','어렵','힘들','감소','악화','불편','깜빡','잊','넘어지','어지럼','누락','중단','거부','싫다','부족','악해','저하','곤란','장벽','의심','미룸','미루'];
 const POS_WORDS = ['잘','좋아','정상','괜찮','문제 없','이상 없','잘 지내','잘 드심','잘 드셨','잘 주무','잘 챙'];
 const EMERGENCY_WORDS = ['자살','자해','없어지고 싶','의미가 없','죽고 싶','화재','불이 나','의식이','쓰러지','학대','폭력','때리','숨을 못'];
@@ -440,16 +462,22 @@ function emptyBaseline(clientId, approvedBy){
 
 function buildSeed(){
   const clients = [
-    {id:'C-1', caseNo:'2026-A04-001', alias:'은행나무 어르신', birthYear:1944, gender:'여', region:'광주 서구', manager:'생활지원사 정○○',
+    {id:'C-1', caseNo:'2026-A04-001', alias:'은행나무 어르신', birthYear:1944, gender:'여', region:'광주 서구', managerId:'W-1',
      contactPref:'전화', contactHours:'오전 9시~11시', emergencyContact:'있음(자녀)', consents:{ai:true,agency:true,relative:false},
      registeredAt: isoDaysAgo(40), completeness:100, dupChecked:true, status:'등록완료'},
-    {id:'C-2', caseNo:'2026-A04-002', alias:'소나무 어르신', birthYear:1951, gender:'남', region:'광주 남구', manager:'생활지원사 정○○',
+    {id:'C-2', caseNo:'2026-A04-002', alias:'소나무 어르신', birthYear:1951, gender:'남', region:'광주 남구', managerId:'W-2',
      contactPref:'전화', contactHours:'오후 2시~4시', emergencyContact:'있음(이웃)', consents:{ai:true,agency:true,relative:true},
      registeredAt: isoDaysAgo(25), completeness:100, dupChecked:true, status:'등록완료'},
-    {id:'C-3', caseNo:'2026-A04-003', alias:'감나무 어르신', birthYear:1939, gender:'여', region:'광주 북구', manager:'생활지원사 박○○',
+    {id:'C-3', caseNo:'2026-A04-003', alias:'감나무 어르신', birthYear:1939, gender:'여', region:'광주 북구', managerId:'W-3',
      contactPref:'전화', contactHours:'오전 10시~12시', emergencyContact:'없음', consents:{ai:true,agency:false,relative:false},
      registeredAt: isoDaysAgo(12), completeness:100, dupChecked:true, status:'등록완료'},
   ];
+  const caseworkers = CASEWORKER_SEED.map(w=>({...w}));
+  function managerNameFor(clientId){
+    const cl = clients.find(c=>c.id===clientId);
+    const cw = caseworkers.find(w=>w.id===(cl&&cl.managerId));
+    return cw ? cw.name : '생활지원사';
+  }
 
   const baselines = [
     (()=>{ const b=emptyBaseline('C-1','전담사회복지사 이○○'); DOMAINS.forEach(d=>b.domains[d.key]='정상'); b.date=isoDaysAgo(40); return b; })(),
@@ -468,7 +496,7 @@ function buildSeed(){
 
   /* --- 시나리오 A: 은행나무 어르신 — 반복되는 작은 변화 (문서 6.5 예시 + 14장 시나리오A) --- */
   function addRecord(clientId, dt, method, memo, priorList){
-    const rec = {id:uid('REC'), clientId, datetime:dt, method, statement:memo, observation: method==='방문' ? '평소보다 말수가 적고 방 안 정리가 덜 되어 있음' : '', memo, nextCheckDate:isoDaysFromNow(3), createdBy:'생활지원사 정○○'};
+    const rec = {id:uid('REC'), clientId, datetime:dt, method, statement:memo, observation: method==='방문' ? '평소보다 말수가 적고 방 안 정리가 덜 되어 있음' : '', memo, nextCheckDate:isoDaysFromNow(3), createdBy:managerNameFor(clientId)};
     records.push(rec);
     const baseline = baselines.find(b=>b.clientId===clientId);
     const priorSignalsForClient = signals.filter(s=>s.clientId===clientId);
@@ -486,7 +514,7 @@ function buildSeed(){
         });
       }
     });
-    pushLog('생활지원사 정○○','안부기록 저장', method+' 상담, 대상자 '+clientId);
+    pushLog(managerNameFor(clientId),'안부기록 저장', method+' 상담, 대상자 '+clientId);
     return {rec, rows, urgency};
   }
 
@@ -521,14 +549,17 @@ function buildSeed(){
     pushLog('전담사회복지사 이○○','경고 종결(오탐)','연락 위험 후보 - 병원 진료로 확인, 정상 일정 처리');
   }
 
-  return {clients, baselines, records, signals, referrals, policies: POLICY_SEED.slice(), audit, seededAt:new Date().toISOString()};
+  return {clients, caseworkers, baselines, records, signals, referrals, policies: POLICY_SEED.slice(), audit, seededAt:new Date().toISOString()};
 }
 
-const STORAGE_KEY = 'ongicheck-mvp-state-v1';
+const STORAGE_KEY = 'ongicheck-mvp-state-v2';
 function loadState(){
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
-    if(raw) return JSON.parse(raw);
+    if(raw){
+      const parsed = JSON.parse(raw);
+      if(parsed.caseworkers) return parsed;
+    }
   }catch(e){}
   const seed = buildSeed();
   try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(seed)); }catch(e){}
@@ -572,12 +603,45 @@ const NAV_ITEMS = [
   {key:'admin', label:'관리자 통계', ico:'▤'},
 ];
 
-function Sidebar({nav, setNav, role, setRole}){
+function Sidebar({nav, setNav, role, setRole, caseworkers, currentCaseworkerId, setCurrentCaseworkerId, onRenameCaseworker}){
+  const [renaming, setRenaming] = useState(false);
+  const [draftName, setDraftName] = useState('');
+  const current = caseworkers.find(w=>w.id===currentCaseworkerId) || caseworkers[0];
+
+  function startRename(){
+    setDraftName(current ? current.name : '');
+    setRenaming(true);
+  }
+  function saveRename(){
+    const name = draftName.trim();
+    if(name) onRenameCaseworker(currentCaseworkerId, name);
+    setRenaming(false);
+  }
+
   return (
     <div className="sidebar">
       <div className="brand">
         <span className="brand-mark">잘한다잘한다</span>
         <span className="brand-sub">A-04 고령층 돌봄 MVP</span>
+      </div>
+      <div className="role-switch">
+        <label>담당자(나)</label>
+        <select value={currentCaseworkerId} onChange={e=>{setCurrentCaseworkerId(e.target.value); setRenaming(false);}}>
+          {caseworkers.map(w=>(<option key={w.id} value={w.id}>{w.name}</option>))}
+        </select>
+        {!renaming ? (
+          <button className="side-btn" onClick={startRename}>이름변경</button>
+        ) : (
+          <div className="side-rename">
+            <input type="text" value={draftName} onChange={e=>setDraftName(e.target.value)}
+              onKeyDown={e=>{ if(e.key==='Enter') saveRename(); if(e.key==='Escape') setRenaming(false); }} autoFocus/>
+            <div className="side-actions">
+              <button className="side-btn primary" onClick={saveRename}>저장</button>
+              <button className="side-btn" onClick={()=>setRenaming(false)}>취소</button>
+            </div>
+          </div>
+        )}
+        <p className="side-hint">담당자가 바뀌면 이름만 바꿔서 이어 쓸 수 있습니다.</p>
       </div>
       <div className="role-switch">
         <label>현재 역할</label>
@@ -721,13 +785,13 @@ function ClientList({state, setNav, query}){
                   <td>{c.alias}</td>
                   <td className="mono">{c.caseNo}</td>
                   <td>{c.region}</td>
-                  <td>{c.manager}</td>
+                  <td>{(state.caseworkers.find(w=>w.id===c.managerId)||{}).name || '미배정'}</td>
                   <td>{worst ? <UrgencyBadge level={worst.urgency}/> : <Badge tone="good">특이신호없음</Badge>}</td>
                   <td>{fmtDate(c.registeredAt)}</td>
                 </tr>
               );
             })}
-            {filtered.length===0 && <tr><td colSpan="6"><Empty>검색 결과가 없습니다.</Empty></td></tr>}
+            {filtered.length===0 && <tr><td colSpan="6"><Empty>{q ? '검색 결과가 없습니다.' : '현재 담당자에게 배정된 대상자가 없습니다.'}</Empty></td></tr>}
           </tbody>
         </table>
       </div>
@@ -738,12 +802,12 @@ function ClientList({state, setNav, query}){
 /* ============================================================
    화면 3. 신규 대상자 등록 마법사
    ============================================================ */
-function NewClientWizard({state, setState, setNav}){
+function NewClientWizard({state, setState, setNav, currentCaseworkerId}){
   const [step, setStep] = useState(0);
   const steps = ['중복 확인','기본정보','연락 설정','동의','완료'];
   const [dupQuery, setDupQuery] = useState({name:'', birthYear:'', phoneTail:'', region:''});
   const [checkedDup, setCheckedDup] = useState(false);
-  const [form, setForm] = useState({alias:'', birthYear:'', gender:'여', region:'', manager:'', caseNo: uid('2026-A04')});
+  const [form, setForm] = useState({alias:'', birthYear:'', gender:'여', region:'', managerId: currentCaseworkerId, caseNo: uid('2026-A04')});
   const [contact, setContact] = useState({contactPref:'전화', contactHours:'', emergencyContact:'없음'});
   const [consents, setConsents] = useState({ai:false, agency:false, relative:false});
 
@@ -757,13 +821,13 @@ function NewClientWizard({state, setState, setNav}){
   function finish(){
     const newClient = {
       id: uid('C'), caseNo: form.caseNo, alias: form.alias || '무명 어르신', birthYear: Number(form.birthYear)||0,
-      gender: form.gender, region: form.region || '미입력', manager: form.manager || '미배정',
+      gender: form.gender, region: form.region || '미입력', managerId: form.managerId || currentCaseworkerId,
       contactPref: contact.contactPref, contactHours: contact.contactHours, emergencyContact: contact.emergencyContact,
       consents, registeredAt: isoDaysAgo(0), completeness: 100, dupChecked:true, status:'등록완료',
     };
     const newBaseline = emptyBaseline(newClient.id, '전담사회복지사 이○○');
     setState(s=>({...s, clients:[...s.clients, newClient], baselines:[...s.baselines, newBaseline],
-      audit:[...s.audit, {id:uid('LOG'), at:new Date().toISOString(), actor:'생활지원사', action:'신규 대상자 등록', detail:newClient.caseNo}]}));
+      audit:[...s.audit, {id:uid('LOG'), at:new Date().toISOString(), actor:(state.caseworkers.find(w=>w.id===newClient.managerId)||{}).name || '생활지원사', action:'신규 대상자 등록', detail:newClient.caseNo}]}));
     setNav({screen:'baseline', params:{clientId:newClient.id, isNew:true}});
   }
 
@@ -809,7 +873,11 @@ function NewClientWizard({state, setState, setNav}){
               <select value={form.gender} onChange={e=>setForm({...form,gender:e.target.value})}><option>여</option><option>남</option></select>
             </div>
             <div className="field"><label>최소 위치정보(지역)</label><input type="text" placeholder="예: 광주 서구" value={form.region} onChange={e=>setForm({...form,region:e.target.value})}/></div>
-            <div className="field"><label>담당자</label><input type="text" value={form.manager} onChange={e=>setForm({...form,manager:e.target.value})}/></div>
+            <div className="field"><label>담당자</label>
+              <select value={form.managerId} onChange={e=>setForm({...form,managerId:e.target.value})}>
+                {state.caseworkers.map(w=>(<option key={w.id} value={w.id}>{w.name}</option>))}
+              </select>
+            </div>
           </div>
           <p className="small" style={{marginTop:10}}>주민번호 전체와 불필요한 가족사는 수집하지 않습니다.</p>
           <div style={{marginTop:14, display:'flex', justifyContent:'space-between'}}>
@@ -856,7 +924,7 @@ function NewClientWizard({state, setState, setNav}){
           <h3 style={{marginBottom:10, fontSize:15}}>등록 내용 확인</h3>
           <div className="kv"><span className="k">사례번호</span><span className="mono">{form.caseNo}</span></div>
           <div className="kv"><span className="k">가명</span><span>{form.alias || '(미입력)'}</span></div>
-          <div className="kv"><span className="k">지역 · 담당자</span><span>{form.region || '(미입력)'} · {form.manager || '(미배정)'}</span></div>
+          <div className="kv"><span className="k">지역 · 담당자</span><span>{form.region || '(미입력)'} · {(state.caseworkers.find(w=>w.id===form.managerId)||{}).name || '(미배정)'}</span></div>
           <div className="kv"><span className="k">연락 설정</span><span>{contact.contactPref} · {contact.contactHours || '(미입력)'}</span></div>
           <div className="kv"><span className="k">동의</span><span>{['ai','agency','relative'].filter(k=>consents[k]).length}/3 항목 동의</span></div>
           <p className="small" style={{marginTop:10}}>완료 후 평소상태 등록으로 이어져, 이후 변화 비교의 기준값을 만듭니다.</p>
@@ -923,8 +991,9 @@ function BaselineForm({state, setState, setNav, clientId, isNew}){
 /* ============================================================
    화면 5. 안부 확인 (질문추천 + 전화/방문 기록)
    ============================================================ */
-function CheckinForm({state, setState, setNav, clientId}){
+function CheckinForm({state, setState, setNav, clientId, currentCaseworkerId}){
   const client = state.clients.find(c=>c.id===clientId);
+  const currentCaseworkerName = (state.caseworkers.find(w=>w.id===currentCaseworkerId)||{}).name || '생활지원사';
   const baseline = state.baselines.find(b=>b.clientId===clientId);
   const clientSignals = state.signals.filter(s=>s.clientId===clientId);
   const [method, setMethod] = useState('전화');
@@ -946,9 +1015,9 @@ function CheckinForm({state, setState, setNav, clientId}){
 
   function submit(){
     const memoParts = [statement, observation].filter(Boolean).join(' ');
-    const rec = {id:uid('REC'), clientId, datetime:new Date().toISOString(), method, statement, observation, memo:memoParts, nextCheckDate:nextDate, createdBy:'생활지원사'};
+    const rec = {id:uid('REC'), clientId, datetime:new Date().toISOString(), method, statement, observation, memo:memoParts, nextCheckDate:nextDate, createdBy:currentCaseworkerName};
     setState(s=>({...s, records:[...s.records, rec],
-      audit:[...s.audit, {id:uid('LOG'), at:new Date().toISOString(), actor:'생활지원사', action:'안부기록 저장', detail:method+' · '+client.caseNo}]}));
+      audit:[...s.audit, {id:uid('LOG'), at:new Date().toISOString(), actor:currentCaseworkerName, action:'안부기록 저장', detail:method+' · '+client.caseNo}]}));
     setNav({screen:'analysis', params:{recordId:rec.id}});
   }
 
@@ -1301,7 +1370,7 @@ function ClientProfile({state, setNav, id, role}){
             <div className="kv"><span className="k">사례번호</span><span className="mono">{client.caseNo}</span></div>
             <div className="kv"><span className="k">출생연도 · 성별</span><span>{client.birthYear}년 · {client.gender}</span></div>
             <div className="kv"><span className="k">지역</span><span>{client.region}</span></div>
-            <div className="kv"><span className="k">담당자</span><span>{client.manager}</span></div>
+            <div className="kv"><span className="k">담당자</span><span>{(state.caseworkers.find(w=>w.id===client.managerId)||{}).name || '미배정'}</span></div>
             <div className="kv"><span className="k">연락</span><span>{client.contactPref} · {client.contactHours}</span></div>
             <div className="kv"><span className="k">동의</span><span>{Object.entries(client.consents).filter(([k,v])=>v).map(([k])=>({ai:'AI분석',agency:'기관연계',relative:'관계인연락'}[k])).join(', ')||'없음'}</span></div>
           </div>
@@ -1416,12 +1485,29 @@ function App(){
   const [nav, setNav] = useState({screen:'dashboard'});
   const [role, setRole] = useState('전담사회복지사');
   const [query, setQuery] = useState('');
+  const [currentCaseworkerId, setCurrentCaseworkerId] = useState(state.caseworkers[0].id);
 
   useEffect(()=>{ saveState(state); }, [state]);
 
+  function renameCaseworker(id, name){
+    setState(s=>({...s, caseworkers: s.caseworkers.map(w=>w.id===id?{...w,name}:w)}));
+  }
+
+  const currentCaseworker = state.caseworkers.find(w=>w.id===currentCaseworkerId) || state.caseworkers[0];
+  const visibleClientIds = useMemo(
+    ()=> new Set(state.clients.filter(c=>c.managerId===currentCaseworkerId).map(c=>c.id)),
+    [state.clients, currentCaseworkerId]
+  );
+  const scopedState = useMemo(()=>({
+    ...state,
+    clients: state.clients.filter(c=>visibleClientIds.has(c.id)),
+    signals: state.signals.filter(s=>visibleClientIds.has(s.clientId)),
+    records: state.records.filter(r=>visibleClientIds.has(r.clientId)),
+  }), [state, visibleClientIds]);
+
   const titles = {
-    dashboard:['오늘의 업무','로그인 계정: '+role],
-    clients:['대상자 목록','전체 담당 대상자'],
+    dashboard:['오늘의 업무','담당자(나): '+currentCaseworker.name+' · 역할: '+role],
+    clients:['대상자 목록', currentCaseworker.name+' 담당 대상자'],
     client:['대상자 상세','타임라인 · 평소상태 · 신호'],
     newClient:['신규 대상자 등록','중복확인 → 기본정보 → 동의'],
     baseline:['평소상태 등록','변화 비교의 기준값'],
@@ -1435,21 +1521,23 @@ function App(){
   const [title, crumb] = titles[nav.screen] || ['잘한다잘한다',''];
 
   let body = null;
-  if(nav.screen==='dashboard') body = <Dashboard state={state} setNav={setNav} role={role}/>;
-  else if(nav.screen==='clients') body = <ClientList state={state} setNav={setNav} query={query}/>;
+  if(nav.screen==='dashboard') body = <Dashboard state={scopedState} setNav={setNav} role={role}/>;
+  else if(nav.screen==='clients') body = <ClientList state={scopedState} setNav={setNav} query={query}/>;
   else if(nav.screen==='client') body = <ClientProfile state={state} setNav={setNav} id={nav.params.id} role={role}/>;
-  else if(nav.screen==='newClient') body = <NewClientWizard state={state} setState={setState} setNav={setNav}/>;
+  else if(nav.screen==='newClient') body = <NewClientWizard state={state} setState={setState} setNav={setNav} currentCaseworkerId={currentCaseworkerId}/>;
   else if(nav.screen==='baseline') body = <BaselineForm state={state} setState={setState} setNav={setNav} clientId={nav.params.clientId} isNew={nav.params.isNew}/>;
-  else if(nav.screen==='checkin') body = <CheckinForm state={state} setState={setState} setNav={setNav} clientId={nav.params.clientId}/>;
+  else if(nav.screen==='checkin') body = <CheckinForm state={state} setState={setState} setNav={setNav} clientId={nav.params.clientId} currentCaseworkerId={currentCaseworkerId}/>;
   else if(nav.screen==='analysis') body = <AnalysisReview state={state} setState={setState} setNav={setNav} recordId={nav.params.recordId} role={role}/>;
-  else if(nav.screen==='priority') body = <PriorityDashboard state={state} setNav={setNav}/>;
+  else if(nav.screen==='priority') body = <PriorityDashboard state={scopedState} setNav={setNav}/>;
   else if(nav.screen==='signal') body = <SignalDetail state={state} setState={setState} setNav={setNav} id={nav.params.id} role={role}/>;
   else if(nav.screen==='policies') body = <PolicyDB state={state}/>;
   else if(nav.screen==='admin') body = <AdminStats state={state}/>;
 
   return (
     <div className="app-shell">
-      <Sidebar nav={nav} setNav={setNav} role={role} setRole={setRole}/>
+      <Sidebar nav={nav} setNav={setNav} role={role} setRole={setRole}
+        caseworkers={state.caseworkers} currentCaseworkerId={currentCaseworkerId}
+        setCurrentCaseworkerId={setCurrentCaseworkerId} onRenameCaseworker={renameCaseworker}/>
       <div className="main">
         <TopBar title={title} crumb={crumb} onSearch={nav.screen==='clients'?setQuery:null} query={query}/>
         <div className="content">{body}</div>
