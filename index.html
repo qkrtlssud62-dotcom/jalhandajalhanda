@@ -1376,7 +1376,9 @@ function NewClientForm({state, setState, setNav, currentCaseworkerId}){
   const nicknameFull = nicknameTrimmed ? (nicknameTrimmed.endsWith('어르신') ? nicknameTrimmed : nicknameTrimmed+' 어르신') : '';
   const nicknameDup = nicknameFull && state.clients.some(c=>c.alias===nicknameFull);
 
-  const requiredOk = form.name && form.birthYear && phoneDigits.length>=9 && nicknameTrimmed && form.region && form.managerId;
+  const birthYearOk = /^(18|19|20)\d{2}$/.test(form.birthYear.trim());
+  const emergencyOk = hasEmergency==='없음' || (emergency.name.trim() && emergency.relation.trim() && onlyDigits(emergency.phone).length>=9);
+  const requiredOk = form.name.trim() && birthYearOk && phoneDigits.length>=9 && nicknameTrimmed && form.region && form.managerId && emergencyOk;
   const canSubmit = requiredOk && !dupClient && !submitting;
 
   function finish(){
@@ -1423,7 +1425,9 @@ function NewClientForm({state, setState, setNav, currentCaseworkerId}){
         <div className="form-grid">
           <div className="field"><label>사례번호</label><input type="text" className="mono" value={caseNo} readOnly disabled/></div>
           <div className="field"><label>이름</label><input type="text" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/></div>
-          <div className="field"><label>출생연도</label><input type="text" placeholder="예: 1944" value={form.birthYear} onChange={e=>setForm({...form,birthYear:e.target.value})}/></div>
+          <div className="field"><label>출생연도</label><input type="text" placeholder="예: 1944" value={form.birthYear} onChange={e=>setForm({...form,birthYear:e.target.value})}/>
+            {form.birthYear && !birthYearOk && <span className="hint" style={{display:'block', color:'var(--warn)'}}>4자리 연도(예: 1944)로 입력해 주세요.</span>}
+          </div>
           <div className="field"><label>성별</label>
             <select value={form.gender} onChange={e=>setForm({...form,gender:e.target.value})}><option>여</option><option>남</option></select>
           </div>
@@ -1465,6 +1469,7 @@ function NewClientForm({state, setState, setNav, currentCaseworkerId}){
             <div className="field"><label>비상연락처</label><input type="text" value={emergency.phone} onChange={e=>setEmergency({...emergency,phone:e.target.value})}/></div>
           </div>
           <label className="checkline" style={{marginTop:10}}><input type="checkbox" checked={emergency.consent} onChange={e=>setEmergency({...emergency,consent:e.target.checked})}/> 긴급 상황 연락 동의 여부</label>
+          {!emergencyOk && <p className="small" style={{marginTop:8, color:'var(--warn)'}}>비상연락망을 '있음'으로 선택한 경우 이름·관계·연락처를 모두 입력해야 등록할 수 있습니다.</p>}
         </>)}
       </div>
 
@@ -1640,7 +1645,7 @@ function CheckinForm({state, setState, setNav, clientId, currentCaseworkerId}){
 /* ============================================================
    화면 6. AI 분석 검토
    ============================================================ */
-function AnalysisReview({state, setState, setNav, recordId, role, currentCaseworkerId}){
+function AnalysisReview({state, setState, setNav, recordId, currentCaseworkerId}){
   const rec = state.records.find(r=>r.id===recordId);
   const client = rec ? state.clients.find(c=>c.id===rec.clientId) : null;
   const currentCaseworkerName = (state.caseworkers.find(w=>w.id===currentCaseworkerId)||{}).name || '생활지원사';
@@ -2361,7 +2366,7 @@ function App(){
   else if(nav.screen==='newClient') body = <NewClientForm state={state} setState={setState} setNav={setNav} currentCaseworkerId={currentCaseworkerId}/>;
   else if(nav.screen==='baseline') body = <BaselineForm state={state} setState={setState} setNav={setNav} clientId={nav.params.clientId} isNew={nav.params.isNew}/>;
   else if(nav.screen==='checkin') body = <CheckinForm state={state} setState={setState} setNav={setNav} clientId={nav.params.clientId} currentCaseworkerId={currentCaseworkerId}/>;
-  else if(nav.screen==='analysis') body = <AnalysisReview state={state} setState={setState} setNav={setNav} recordId={nav.params.recordId} role={role} currentCaseworkerId={currentCaseworkerId}/>;
+  else if(nav.screen==='analysis') body = <AnalysisReview state={state} setState={setState} setNav={setNav} recordId={nav.params.recordId} currentCaseworkerId={currentCaseworkerId}/>;
   else if(nav.screen==='priority') body = <PriorityDashboard state={scopedState} setNav={setNav}/>;
   else if(nav.screen==='signal') body = <SignalDetail state={state} setState={setState} setNav={setNav} id={nav.params.id} role={role}/>;
   else if(nav.screen==='policies') body = <PolicyDB state={state}/>;
