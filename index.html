@@ -321,7 +321,8 @@ const DOMAINS = [
   {key:'sleep',      label:'수면·피로',    hint:'불면, 과다수면, 밤낮 변화, 기력 저하',
    kw:['잠','수면','불면','낮잠','피곤','피로','새벽','뒤척','기력','무기력','밤낮']},
   {key:'pain',       label:'통증·건강',    hint:'통증 발생·악화, 호흡곤란, 발열 등 건강 이상',
-   kw:['아프','통증','쑤시','병원','진료','수술','퇴원','기침','열이','발열','호흡','숨차']},
+   // '아프다'는 으불규칙 활용이라 '아파/아팠/아픈'이 '아프'를 부분문자열로 포함하지 않는다 — 각 활용형을 별도로 등록
+   kw:['아프','아파','아팠','아픈','통증','쑤시','병원','진료','수술','퇴원','기침','열이','발열','호흡','숨차']},
   {key:'fall',       label:'낙상·거동',    hint:'실제 낙상, 휘청거림, 보행 곤란, 외출 어려움',
    kw:['넘어지','낙상','어지럼','어지러','계단','화장실','거동','휘청','주저앉','외출','나가지','보행','걷기']},
   {key:'medication', label:'복약·의료이용', hint:'약 누락·중복, 처방약 부족, 병원 방문 필요',
@@ -531,6 +532,7 @@ function suggestUrgency(rows, emergency){
 
 const EMBEDDING_MODEL_ID = 'Xenova/multilingual-e5-small';
 const EMBEDDING_THRESHOLD = 0.75; // 이 미만이면 확신 없는 판정으로 보고 '미확인'으로 남겨 사람이 보게 한다
+const MODEL_LOAD_TIMEOUT_MS = 8000; // 발표 현장 등 네트워크가 느릴 때 이 시간 안에 준비 안 되면 규칙 기반으로 폴백
 
 /* 도메인별 정상/이상 참고 예시 문장 — 임베딩 유사도 판정의 기준(few-shot 레퍼런스) */
 const DOMAIN_REFERENCE_EXAMPLES = {
@@ -597,25 +599,44 @@ const EmbeddingEngine = (function(){
   let startedPromise = null;
   function ensureReady(){
     if(startedPromise) return startedPromise;
+    let timedOut = false;
+    // 발표 현장 등 네트워크가 불안정할 때, 이 시간 안에 준비되지 않으면 규칙 기반으로 폴백한다.
+    // 다운로드 자체는 백그라운드에서 계속 진행되며, 실제로 완료되면 자동으로 'ready'로 업그레이드된다.
+    const timeoutId = setTimeout(()=>{
+      if(state.status!=='ready'){
+        timedOut = true;
+        setState({status:'timeout', message:'AI 모델을 불러오지 못해 기본 규칙으로 분석했습니다.'});
+      }
+    }, MODEL_LOAD_TIMEOUT_MS);
+
+    // 이미 타임아웃 폴백 문구를 보여준 뒤에는, 계속 진행 중인 로딩의 중간 상태(진행률 등)로
+    // 화면을 되돌리지 않는다. 최종 'ready'만은 항상 반영해 늦게라도 성공하면 자동 승격시킨다.
+    function reportProgress(patch){ if(!timedOut) setState(patch); }
+
     startedPromise = (async ()=>{
-      setState({status:'loading-lib', message:'분석 라이브러리 불러오는 중...'});
+      reportProgress({status:'loading-lib', message:'분석 라이브러리 불러오는 중...'});
       const tfjs = await waitForTfjsLib();
-      setState({status:'loading-model', progress:0, message:'AI 분석 모델 불러오는 중...'});
+      reportProgress({status:'loading-model', progress:0, message:'AI 분석 모델 불러오는 중...'});
       const extractor = await tfjs.pipeline('feature-extraction', EMBEDDING_MODEL_ID, {
         progress_callback:(p)=>{
           if(p && p.status==='progress'){
             const pct = p.total ? Math.round((p.loaded/p.total)*100) : Math.round(p.progress||0);
-            setState({progress:pct, message:'AI 분석 모델 불러오는 중... ('+pct+'%)'});
+            reportProgress({progress:pct, message:'AI 분석 모델 불러오는 중... ('+pct+'%)'});
           }
         },
       });
-      setState({status:'preparing-references', progress:100, message:'참고 예시 문장 준비 중...', extractor});
+      setState({extractor}); // embed()가 내부적으로 참조하므로 타임아웃 여부와 무관하게 항상 저장해둔다
+      reportProgress({status:'preparing-references', progress:100, message:'참고 예시 문장 준비 중...'});
       // 매 분석마다 다시 계산하지 않도록, 5개 영역의 참고 예시를 미리 전부 임베딩해 캐시해둔다
       await Promise.all(Object.keys(DOMAIN_REFERENCE_EXAMPLES).map(getDomainReferenceEmbeddings));
-      setState({status:'ready', message:''});
+      clearTimeout(timeoutId);
+      setState({status:'ready', message:''}); // 늦게 성공해도 항상 반영(자동 업그레이드)
       return extractor;
     })().catch(err=>{
-      setState({status:'error', message:'AI 분석 모델을 불러오지 못했습니다. 규칙 기반 분석으로 진행합니다.', error:String((err&&err.message)||err)});
+      clearTimeout(timeoutId);
+      if(!timedOut){
+        setState({status:'error', message:'AI 분석 모델을 불러오지 못했습니다. 규칙 기반 분석으로 진행합니다.', error:String((err&&err.message)||err)});
+      }
       throw err;
     });
     return startedPromise;
@@ -689,6 +710,89 @@ const ANALYZERS = {rule: ruleBasedAnalyzer, embedding: embeddingAnalyzer};
 
 function useEmbeddingEngineState(){
   return useSyncExternalStore(EmbeddingEngine.subscribe, EmbeddingEngine.getState);
+}
+
+/* ============================================================
+   임베딩 분석기 정확도 검증용 테스트 세트 (31건, 정답 라벨 포함)
+   1~30번은 DOMAIN_REFERENCE_EXAMPLES와 동일한 문장이라 자기 자신과의 유사도가
+   항상 최고점이 되므로, 이 30건은 "일반화 성능"이 아니라 "기준 예시를 있는 그대로
+   회수하는지"를 확인하는 자기일관성 테스트에 가깝다. 진짜 일반화 확인은 31번처럼
+   참고 예시에 없는 새 문장으로 봐야 한다.
+   ============================================================ */
+const EMBEDDING_TEST_SET = [
+  {id:1, domain:'nutrition', expected:'정상', text:'삼시세끼 다 잘 챙겨 드시고 물도 충분히 드신다고 하셨음.'},
+  {id:2, domain:'nutrition', expected:'정상', text:'요즘 입맛이 좋아지셔서 반찬도 골고루 잘 드신다고 함.'},
+  {id:3, domain:'nutrition', expected:'정상', text:'식사량 줄지 않고 예전처럼 잘 드시고 계심.'},
+  {id:4, domain:'nutrition', expected:'이상', text:'요즘 입맛이 없어서 하루 한 끼밖에 안 드신다고 하심.'},
+  {id:5, domain:'nutrition', expected:'이상', text:'물도 잘 안 드시고 며칠째 식사량이 줄었다고 함.'},
+  {id:6, domain:'nutrition', expected:'이상', text:'죽만 겨우 몇 숟갈 드셨다고 하심.'},
+  {id:7, domain:'sleep', expected:'정상', text:'밤에 잘 주무시고 낮에도 기력이 괜찮다고 하심.'},
+  {id:8, domain:'sleep', expected:'정상', text:'요즘 잠도 잘 자고 개운하다고 하셨음.'},
+  {id:9, domain:'sleep', expected:'정상', text:'수면에 특별한 어려움은 없다고 하심.'},
+  {id:10, domain:'sleep', expected:'이상', text:'요즘 며칠째 잠을 잘 못 주무신다고 함.'},
+  {id:11, domain:'sleep', expected:'이상', text:'밤에 자주 깨고 낮에는 계속 피곤해하신다고 하심.'},
+  {id:12, domain:'sleep', expected:'이상', text:'밤낮이 바뀌어서 낮에 무기력해하신다고 함.'},
+  {id:13, domain:'pain', expected:'정상', text:'요즘 특별히 아픈 곳 없이 잘 지내고 계심.'},
+  {id:14, domain:'pain', expected:'정상', text:'통증이나 열, 기침 같은 특이사항은 없다고 하심.'},
+  {id:15, domain:'pain', expected:'정상', text:'병원 갈 일 없이 건강하게 지내신다고 함.'},
+  {id:16, domain:'pain', expected:'이상', text:'허리가 계속 쑤신다고 하시면서 병원 진료를 미루고 계심.'},
+  {id:17, domain:'pain', expected:'이상', text:'요 며칠 기침이 심하고 숨이 차다고 하심.'},
+  {id:18, domain:'pain', expected:'이상', text:'무릎 통증이 심해져서 걷기 힘들다고 함.'},
+  {id:19, domain:'fall', expected:'정상', text:'요즘 산책도 잘 다니시고 거동에 불편함은 없다고 하심.'},
+  {id:20, domain:'fall', expected:'정상', text:'외출도 평소처럼 잘 하고 계신다고 함.'},
+  {id:21, domain:'fall', expected:'정상', text:'넘어지거나 어지러운 적 없이 잘 지내신다고 하심.'},
+  {id:22, domain:'fall', expected:'이상', text:'어제 화장실 가다가 넘어질 뻔했다고 하심.'},
+  {id:23, domain:'fall', expected:'이상', text:'요즘 어지러워서 밖에 나가지 않으신다고 함.'},
+  {id:24, domain:'fall', expected:'이상', text:'계단에서 휘청거려서 요즘 외출을 꺼리신다고 하심.'},
+  {id:25, domain:'medication', expected:'정상', text:'약은 하루도 안 빠지고 잘 챙겨 드신다고 하심.'},
+  {id:26, domain:'medication', expected:'정상', text:'처방받은 대로 복약 잘 하고 계신다고 함.'},
+  {id:27, domain:'medication', expected:'정상', text:'병원 예약도 잊지 않고 잘 다니신다고 하심.'},
+  {id:28, domain:'medication', expected:'이상', text:'요즘 약을 자주 깜빡하신다고 함.'},
+  {id:29, domain:'medication', expected:'이상', text:'처방약이 떨어졌는데 병원 예약을 못 잡으셨다고 하심.'},
+  {id:30, domain:'medication', expected:'이상', text:'약 먹는 걸 자꾸 거부하신다고 함.'},
+  {id:31, note:'기존 규칙기반에서 실제 오탐이 확인된 복합 문장 — 이번 수정의 핵심 검증 케이스',
+   text:'요즘 밤에 잠을 잘 못 주무시고, 화장실 가다가 어제 한 번 넘어질 뻔하셨다고 함. 밥은 잘 드시는데 약 챙기는 걸 자주 깜빡하신다고 하심.',
+   multiExpected: {
+     nutrition: {not:'이상', note:'정상 또는 미확인, 절대 이상/악화 아님'},
+     sleep: {is:'이상'},
+     fall: {is:'이상'},
+     medication: {is:'이상'},
+     pain: {is:'미확인', note:'해당없음'},
+   }},
+];
+
+async function runEmbeddingAccuracyTest(){
+  const results = [];
+  for(const c of EMBEDDING_TEST_SET){
+    const {rows} = await embeddingAnalyzer.classify(c.text);
+    if(c.multiExpected){
+      const checks = Object.entries(c.multiExpected).map(([domain, rule])=>{
+        const row = rows.find(r=>r.domain===domain);
+        const actual = row ? row.status : '미확인';
+        const pass = rule.is ? actual===rule.is : actual!==rule.not;
+        return {domain, label:(DOMAIN_MAP[domain]||{}).label||domain, rule, actual, similarity: row?row.similarity:null, pass};
+      });
+      results.push({id:c.id, text:c.text, note:c.note, multi:true, checks, pass: checks.every(ch=>ch.pass)});
+    } else {
+      const row = rows.find(r=>r.domain===c.domain);
+      const actual = row ? row.status : '미확인';
+      results.push({id:c.id, text:c.text, domain:c.domain, label:(DOMAIN_MAP[c.domain]||{}).label||c.domain,
+        expected:c.expected, actual, similarity: row?row.similarity:null, pass: actual===c.expected});
+    }
+  }
+  const passCount = results.filter(r=>r.pass).length;
+  console.group('[임베딩 분석기 정확도 검증] '+passCount+'/'+results.length+' ('+Math.round(passCount/results.length*100)+'%)');
+  results.forEach(r=>{
+    if(r.multi){
+      console.log((r.pass?'✅':'❌')+' #'+r.id+' [복합 케이스] '+r.text);
+      r.checks.forEach(ch=>console.log('    - '+ch.label+': 기대 '+(ch.rule.is?('='+ch.rule.is):('≠'+ch.rule.not))+' / 실제 '+ch.actual+' → '+(ch.pass?'OK':'FAIL')));
+    } else {
+      console.log((r.pass?'✅':'❌')+' #'+r.id+' ['+r.label+'] 기대 '+r.expected+' / 실제 '+r.actual
+        +(r.similarity!=null?' (유사도 '+r.similarity.toFixed(2)+')':'')+' — '+r.text);
+    }
+  });
+  console.groupEnd();
+  return results;
 }
 
 /* ============================================================
@@ -850,9 +954,10 @@ function EmbeddingStatusBadge(){
     'loading-model':'AI 분석 모델: 불러오는 중'+(s.progress?' ('+s.progress+'%)':'...'),
     'preparing-references':'AI 분석 모델: 예시 문장 준비 중...',
     'ready':'AI 분석 모델: 준비 완료',
+    'timeout':'AI 분석 모델: 시간 초과(규칙 기반 대체 중)',
     'error':'AI 분석 모델: 사용 불가(규칙 기반 대체)',
   }[s.status] || 'AI 분석 모델';
-  const tone = s.status==='ready' ? 'good' : s.status==='error' ? 'warn' : 'neutral';
+  const tone = s.status==='ready' ? 'good' : (s.status==='error'||s.status==='timeout') ? 'warn' : 'neutral';
   return <div className={"embed-status embed-status--"+tone}><span className="embed-status-dot"></span>{label}</div>;
 }
 
@@ -1426,11 +1531,11 @@ function AnalysisReview({state, setState, setNav, recordId, role}){
               <button className={analyzerKey==='embedding'?'on':''} onClick={()=>setAnalyzerKey('embedding')}>임베딩 분석(AI)</button>
               <button className={analyzerKey==='rule'?'on':''} onClick={()=>setAnalyzerKey('rule')}>규칙 기반</button>
             </div>
-            {analyzerKey==='embedding' && engineState.status!=='ready' && engineState.status!=='error' && (
+            {analyzerKey==='embedding' && !['ready','error','timeout'].includes(engineState.status) && (
               <p className="small" style={{marginTop:4}}>{engineState.message||'모델 준비 중'} — 준비될 때까지는 규칙 기반 결과를 임시로 보여줍니다.</p>
             )}
-            {analyzerKey==='embedding' && engineState.status==='error' && (
-              <p className="small" style={{marginTop:4, color:'var(--warn)'}}>AI 분석 모델을 불러오지 못해 규칙 기반으로 대체했습니다.</p>
+            {analyzerKey==='embedding' && (engineState.status==='error' || engineState.status==='timeout') && (
+              <p className="small" style={{marginTop:4, color:'var(--warn)'}}>{engineState.message || 'AI 모델을 불러오지 못해 기본 규칙으로 분석했습니다.'}</p>
             )}
             {usedFallback && engineState.status==='ready' && (
               <p className="small" style={{marginTop:4, color:'var(--warn)'}}>이번 분석은 임베딩 호출 오류로 규칙 기반 결과입니다.</p>
@@ -1743,6 +1848,71 @@ function PolicyDB({state}){
 /* ============================================================
    화면 12. 관리자 통계
    ============================================================ */
+function EmbeddingAccuracyPanel(){
+  const engineState = useEmbeddingEngineState();
+  const [running, setRunning] = useState(false);
+  const [results, setResults] = useState(null);
+
+  async function run(){
+    setRunning(true);
+    const res = await runEmbeddingAccuracyTest(); // 결과는 함수 내부에서 콘솔에도 출력됨
+    setResults(res);
+    setRunning(false);
+  }
+
+  const passCount = results ? results.filter(r=>r.pass).length : 0;
+  const pct = results ? Math.round(passCount/results.length*100) : null;
+  const case31 = results ? results.find(r=>r.id===31) : null;
+
+  return (
+    <div className="card" style={{marginBottom:24}}>
+      <div className="dl" style={{fontWeight:600, marginBottom:8, fontSize:13}}>임베딩 분석기 정확도 검증</div>
+      <p className="small" style={{marginBottom:10}}>사전 정의된 31개 예시 문장(1~30은 참고 예시 자체, 31은 절 경계 오탐 검증용 복합 문장)으로 embeddingAnalyzer의 판정 정확도를 확인합니다. 결과는 브라우저 콘솔에도 출력됩니다.</p>
+      <button className="btn btn--primary btn--sm" disabled={running || engineState.status!=='ready'} onClick={run}>
+        {running ? '검증 실행 중...' : '정확도 검증 실행'}
+      </button>
+      {engineState.status!=='ready' && (
+        <p className="small" style={{marginTop:8, color:'var(--warn)'}}>AI 분석 모델이 준비되어야 실행할 수 있습니다 (현재: {engineState.message || engineState.status}).</p>
+      )}
+      {results && (
+        <div style={{marginTop:14}}>
+          <div style={{display:'flex', gap:14, alignItems:'baseline', marginBottom:10, flexWrap:'wrap'}}>
+            <div className="stat-num mono" style={{fontSize:24}}>{pct}%</div>
+            <div className="small">{passCount} / {results.length} 정답</div>
+            {case31 && <Badge tone={case31.pass?'good':'danger'}>#31 핵심 케이스 {case31.pass?'통과':'실패'}</Badge>}
+          </div>
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>#</th><th>영역</th><th>기대</th><th>실제</th><th>유사도</th><th>문장</th></tr></thead>
+              <tbody>
+                {results.map(r=> r.multi ? r.checks.map(ch=>(
+                  <tr key={r.id+'-'+ch.domain}>
+                    <td className="mono">{r.id}</td>
+                    <td>{ch.label}</td>
+                    <td>{ch.rule.is ? ch.rule.is : '≠ '+ch.rule.not}</td>
+                    <td>{ch.pass ? <Badge tone="good">{ch.actual}</Badge> : <Badge tone="danger">{ch.actual}</Badge>}</td>
+                    <td className="mono">{ch.similarity!=null?ch.similarity.toFixed(2):'-'}</td>
+                    <td className="small">{r.text}</td>
+                  </tr>
+                )) : (
+                  <tr key={r.id}>
+                    <td className="mono">{r.id}</td>
+                    <td>{r.label}</td>
+                    <td>{r.expected}</td>
+                    <td>{r.pass ? <Badge tone="good">{r.actual}</Badge> : <Badge tone="danger">{r.actual}</Badge>}</td>
+                    <td className="mono">{r.similarity!=null?r.similarity.toFixed(2):'-'}</td>
+                    <td className="small">{r.text}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AdminStats({state}){
   const openSignals = state.signals.filter(s=>s.lifecycle!=='종결');
   const overdue = openSignals.filter(s=>{ if(s.deadline==='즉시') return s.lifecycle==='신규'; const du=daysUntil(s.deadline); return du!==null && du<0; });
@@ -1761,6 +1931,8 @@ function AdminStats({state}){
         <div className="stat-tile"><div className="stat-num mono" style={{color:'var(--warn)'}}>{closedFalse.length}</div><div className="stat-label">오탐 종결</div></div>
         <div className="stat-tile"><div className="stat-num mono" style={{color:'var(--good)'}}>{referralDone}</div><div className="stat-label">연계 완료</div></div>
       </div>
+
+      <EmbeddingAccuracyPanel/>
 
       <div className="section-head"><h2>위험영역별 경고 추세</h2></div>
       <div className="table-wrap" style={{marginBottom:24}}>
