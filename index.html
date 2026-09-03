@@ -541,6 +541,13 @@ const POLICY_SEED = [
 function uid(p){ return p+'-'+Math.random().toString(36).slice(2,7).toUpperCase(); }
 function isoDaysFromNow(n){ const d=new Date(); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); }
 function isoDaysAgo(n){ return isoDaysFromNow(-n); }
+function onlyDigits(v){ return (v||'').replace(/[^0-9]/g,''); }
+/* 사례번호는 사용자가 입력·수정할 수 없는 자동 생성 값이다: 2026-A04- 뒤에 기존 최대 순번+1을 0패딩해 붙인다. */
+function genCaseNo(clients){
+  const nums = (clients||[]).map(c=>{ const m=/^2026-A04-(\d+)$/.exec(c.caseNo||''); return m?parseInt(m[1],10):0; });
+  const next = (nums.length ? Math.max(...nums) : 0) + 1;
+  return '2026-A04-'+String(next).padStart(3,'0');
+}
 function fmtDate(iso){ if(!iso) return '-'; try{ return new Date(iso+'T00:00:00').toLocaleDateString('ko-KR',{year:'numeric',month:'2-digit',day:'2-digit'}); }catch(e){return iso;} }
 function fmtDateTime(iso){ if(!iso) return '-'; try{ return new Date(iso).toLocaleDateString('ko-KR',{year:'numeric',month:'2-digit',day:'2-digit'})+' '+new Date(iso).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}); }catch(e){return iso;} }
 function daysUntil(iso){ if(!iso) return null; const d=new Date(iso+'T00:00:00'); const t=new Date(); t.setHours(0,0,0,0); return Math.round((d-t)/86400000); }
@@ -997,14 +1004,14 @@ function emptyBaseline(clientId, approvedBy){
 
 function buildSeed(){
   const clients = [
-    {id:'C-1', caseNo:'2026-A04-001', alias:'은행나무 어르신', birthYear:1944, gender:'여', region:'광주 서구', managerId:'W-1',
-     contactPref:'전화', contactHours:'오전 9시~11시', emergencyContact:'있음(자녀)', consents:{ai:true,agency:true,relative:false},
+    {id:'C-1', caseNo:'2026-A04-001', name:'김○자', alias:'은행나무 어르신', nickname:'은행나무', birthYear:1944, gender:'여', phone:'010-2222-1001', region:'광주 서구', managerId:'W-1',
+     emergency:{has:'있음', name:'김○수', relation:'자녀', phone:'010-3333-1001', consent:true}, consents:{privacy:true, ai:true, agency:true, emergency:true, date:isoDaysAgo(40)},
      registeredAt: isoDaysAgo(40), completeness:100, dupChecked:true, status:'등록완료'},
-    {id:'C-2', caseNo:'2026-A04-002', alias:'소나무 어르신', birthYear:1951, gender:'남', region:'광주 남구', managerId:'W-2',
-     contactPref:'전화', contactHours:'오후 2시~4시', emergencyContact:'있음(이웃)', consents:{ai:true,agency:true,relative:true},
+    {id:'C-2', caseNo:'2026-A04-002', name:'박○수', alias:'소나무 어르신', nickname:'소나무', birthYear:1951, gender:'남', phone:'010-2222-1002', region:'광주 남구', managerId:'W-2',
+     emergency:{has:'있음', name:'박○희', relation:'이웃', phone:'010-3333-1002', consent:true}, consents:{privacy:true, ai:true, agency:true, emergency:true, date:isoDaysAgo(25)},
      registeredAt: isoDaysAgo(25), completeness:100, dupChecked:true, status:'등록완료'},
-    {id:'C-3', caseNo:'2026-A04-003', alias:'감나무 어르신', birthYear:1939, gender:'여', region:'광주 북구', managerId:'W-3',
-     contactPref:'전화', contactHours:'오전 10시~12시', emergencyContact:'없음', consents:{ai:true,agency:false,relative:false},
+    {id:'C-3', caseNo:'2026-A04-003', name:'이○자', alias:'감나무 어르신', nickname:'감나무', birthYear:1939, gender:'여', phone:'010-2222-1003', region:'광주 북구', managerId:'W-3',
+     emergency:{has:'없음'}, consents:{privacy:true, ai:true, agency:false, emergency:false, date:isoDaysAgo(12)},
      registeredAt: isoDaysAgo(12), completeness:100, dupChecked:true, status:'등록완료'},
   ];
   const caseworkers = CASEWORKER_SEED.map(w=>({...w}));
@@ -1087,7 +1094,7 @@ function buildSeed(){
   return {clients, caseworkers, baselines, records, signals, referrals, policies: POLICY_SEED.slice(), audit, seededAt:new Date().toISOString()};
 }
 
-const STORAGE_KEY = 'ongicheck-mvp-state-v4';
+const STORAGE_KEY = 'ongicheck-mvp-state-v5';
 function loadState(){
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -1343,140 +1350,147 @@ function ClientList({state, setNav, query}){
 }
 
 /* ============================================================
-   화면 3. 신규 대상자 등록 마법사
+   화면 3. 신규 대상자 등록 (단일 페이지)
    ============================================================ */
-function NewClientWizard({state, setState, setNav, currentCaseworkerId}){
-  const [step, setStep] = useState(0);
-  const steps = ['중복 확인','기본정보','연락 설정','동의','완료'];
-  const [dupQuery, setDupQuery] = useState({name:'', birthYear:'', phoneTail:'', region:''});
-  const [checkedDup, setCheckedDup] = useState(false);
-  const [form, setForm] = useState({alias:'', birthYear:'', gender:'여', region:'', managerId: currentCaseworkerId, caseNo: uid('2026-A04')});
-  const [contact, setContact] = useState({contactPref:'전화', contactHours:'', emergencyContact:'없음'});
-  const [consents, setConsents] = useState({ai:false, agency:false, relative:false});
+const REGION_OPTIONS = GU_LIST.map(g=>'광주 '+g.label);
+const CONSENT_ITEMS = [
+  {key:'privacy', label:'개인정보 수집·이용 동의'},
+  {key:'ai', label:'AI 분석 활용 동의'},
+  {key:'agency', label:'기관 연계 동의'},
+  {key:'emergency', label:'비상 상황 연락 동의'},
+];
 
-  const dupCandidates = state.clients.filter(c=>{
-    if(!dupQuery.name && !dupQuery.birthYear && !dupQuery.phoneTail) return false;
-    const nameHit = dupQuery.name && c.alias.includes(dupQuery.name);
-    const yearHit = dupQuery.birthYear && String(c.birthYear)===dupQuery.birthYear;
-    return nameHit || yearHit;
-  });
+function NewClientForm({state, setState, setNav, currentCaseworkerId}){
+  const [caseNo] = useState(()=>genCaseNo(state.clients));
+  const [form, setForm] = useState({name:'', birthYear:'', gender:'여', phone:'', nickname:'', region:REGION_OPTIONS[0], managerId: currentCaseworkerId});
+  const [hasEmergency, setHasEmergency] = useState('없음');
+  const [emergency, setEmergency] = useState({name:'', relation:'', phone:'', consent:false});
+  const [consents, setConsents] = useState({privacy:false, ai:false, agency:false, emergency:false});
+  const [submitting, setSubmitting] = useState(false);
+  const [done, setDone] = useState(null); // {clientId}
+
+  const phoneDigits = onlyDigits(form.phone);
+  const dupClient = phoneDigits.length>=9 ? state.clients.find(c=>onlyDigits(c.phone)===phoneDigits) : null;
+
+  const nicknameTrimmed = form.nickname.trim();
+  const nicknameFull = nicknameTrimmed ? (nicknameTrimmed.endsWith('어르신') ? nicknameTrimmed : nicknameTrimmed+' 어르신') : '';
+  const nicknameDup = nicknameFull && state.clients.some(c=>c.alias===nicknameFull);
+
+  const requiredOk = form.name && form.birthYear && phoneDigits.length>=9 && nicknameTrimmed && form.region && form.managerId;
+  const canSubmit = requiredOk && !dupClient && !submitting;
 
   function finish(){
+    if(!canSubmit) return;
+    setSubmitting(true);
+    const managerName = (state.caseworkers.find(w=>w.id===form.managerId)||{}).name || '생활지원사';
     const newClient = {
-      id: uid('C'), caseNo: form.caseNo, alias: form.alias || '무명 어르신', birthYear: Number(form.birthYear)||0,
-      gender: form.gender, region: form.region || '미입력', managerId: form.managerId || currentCaseworkerId,
-      contactPref: contact.contactPref, contactHours: contact.contactHours, emergencyContact: contact.emergencyContact,
-      consents, registeredAt: isoDaysAgo(0), completeness: 100, dupChecked:true, status:'등록완료',
+      id: uid('C'), caseNo, name: form.name, alias: nicknameFull, nickname: nicknameTrimmed,
+      birthYear: Number(form.birthYear)||0, gender: form.gender, phone: form.phone,
+      region: form.region, managerId: form.managerId,
+      emergency: hasEmergency==='있음' ? {has:'있음', name:emergency.name, relation:emergency.relation, phone:emergency.phone, consent:emergency.consent} : {has:'없음'},
+      consents: {...consents, date: isoDaysAgo(0)},
+      registeredAt: isoDaysAgo(0), completeness: 100, dupChecked:true, status:'등록완료',
     };
-    const newBaseline = emptyBaseline(newClient.id, '전담사회복지사 이○○');
+    const newBaseline = emptyBaseline(newClient.id, managerName);
     setState(s=>({...s, clients:[...s.clients, newClient], baselines:[...s.baselines, newBaseline],
-      audit:[...s.audit, {id:uid('LOG'), at:new Date().toISOString(), actor:(state.caseworkers.find(w=>w.id===newClient.managerId)||{}).name || '생활지원사', action:'신규 대상자 등록', detail:newClient.caseNo}]}));
-    setNav({screen:'baseline', params:{clientId:newClient.id, isNew:true}});
+      audit:[...s.audit, {id:uid('LOG'), at:new Date().toISOString(), actor:managerName, action:'신규 대상자 등록', detail:newClient.caseNo}]}));
+    setSubmitting(false);
+    setDone({clientId:newClient.id});
+  }
+
+  if(done){
+    return (
+      <div>
+        <div className="section-head"><h2>신규 대상자 등록</h2></div>
+        <div className="card" style={{maxWidth:640}}>
+          <p style={{fontWeight:600, color:'var(--good)', marginBottom:8}}>등록이 완료되었습니다. (사례번호 {caseNo})</p>
+          <p className="small" style={{marginBottom:14}}>대상자 등록과 AI 분석 절차는 분리되어 있습니다. 첫 통화기록을 저장하면 그 내용을 바탕으로 AI 분석이 진행됩니다.</p>
+          <div style={{display:'flex', gap:8}}>
+            <button className="btn" onClick={()=>setNav({screen:'client', params:{id:done.clientId}})}>대상자 프로필 보기</button>
+            <button className="btn btn--primary" onClick={()=>setNav({screen:'checkin', params:{clientId:done.clientId}})}>첫 통화기록 작성</button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div>
       <div className="section-head"><h2>신규 대상자 등록</h2></div>
-      <div className="stepper">
-        {steps.map((s,i)=>(<span key={s} className={"step"+(i===step?' active':i<step?' done':'')}>{i+1}. {s}</span>))}
+
+      <div className="card" style={{maxWidth:720, marginBottom:16}}>
+        <div className="dl" style={{fontWeight:600, marginBottom:10, fontSize:13}}>기본정보</div>
+        <div className="form-grid">
+          <div className="field"><label>사례번호</label><input type="text" className="mono" value={caseNo} readOnly disabled/></div>
+          <div className="field"><label>이름</label><input type="text" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/></div>
+          <div className="field"><label>출생연도</label><input type="text" placeholder="예: 1944" value={form.birthYear} onChange={e=>setForm({...form,birthYear:e.target.value})}/></div>
+          <div className="field"><label>성별</label>
+            <select value={form.gender} onChange={e=>setForm({...form,gender:e.target.value})}><option>여</option><option>남</option></select>
+          </div>
+          <div className="field"><label>전화번호</label><input type="text" placeholder="예: 010-1234-5678" value={form.phone} onChange={e=>setForm({...form,phone:e.target.value})}/></div>
+          <div className="field"><label>닉네임</label><input type="text" placeholder="예: 은행나무" value={form.nickname} onChange={e=>setForm({...form,nickname:e.target.value})}/>
+            {nicknameFull && <span className="hint" style={{display:'block'}}>등록될 표시명: {nicknameFull}</span>}
+          </div>
+          <div className="field"><label>지역</label>
+            <select value={form.region} onChange={e=>setForm({...form,region:e.target.value})}>
+              {REGION_OPTIONS.map(r=>(<option key={r} value={r}>{r}</option>))}
+            </select>
+          </div>
+          <div className="field"><label>담당 생활지원사</label>
+            <select value={form.managerId} onChange={e=>setForm({...form,managerId:e.target.value})}>
+              {state.caseworkers.map(w=>(<option key={w.id} value={w.id}>{w.name}</option>))}
+            </select>
+          </div>
+        </div>
+        {nicknameDup && <p className="small" style={{marginTop:8, color:'var(--warn)'}}>이미 같은 닉네임을 사용하는 대상자가 있습니다. 다른 대상자와 혼동되지 않도록 닉네임 조정을 권장합니다.</p>}
+        {dupClient && (
+          <div className="small" style={{marginTop:8, color:'var(--danger)'}}>
+            동일한 전화번호로 등록된 대상자가 있습니다: {dupClient.alias} ({dupClient.caseNo}). 신규 등록 대신 기존 프로필을 확인해 주세요.
+            <div style={{marginTop:6}}><button className="btn btn--sm" onClick={()=>setNav({screen:'client', params:{id:dupClient.id}})}>기존 프로필 열기</button></div>
+          </div>
+        )}
+        <p className="small" style={{marginTop:10}}>주민번호 전체와 불필요한 가족사는 수집하지 않습니다.</p>
       </div>
 
-      {step===0 && (
-        <div className="card" style={{maxWidth:640}}>
-          <p className="small" style={{marginBottom:12}}>중복 등록으로 과거 기록과 담당이 분리되지 않도록, 완전 일치가 아닌 유사 후보를 먼저 확인합니다.</p>
+      <div className="card" style={{maxWidth:720, marginBottom:16}}>
+        <div className="dl" style={{fontWeight:600, marginBottom:10, fontSize:13}}>비상연락망</div>
+        <div className="field" style={{maxWidth:220, marginBottom:10}}>
+          <label>비상연락망 여부</label>
+          <select value={hasEmergency} onChange={e=>setHasEmergency(e.target.value)}><option>없음</option><option>있음</option></select>
+        </div>
+        {hasEmergency==='있음' && (<>
           <div className="form-grid">
-            <div className="field"><label>가명 또는 이름</label><input type="text" value={dupQuery.name} onChange={e=>setDupQuery({...dupQuery,name:e.target.value})}/></div>
-            <div className="field"><label>출생연도</label><input type="text" placeholder="예: 1944" value={dupQuery.birthYear} onChange={e=>setDupQuery({...dupQuery,birthYear:e.target.value})}/></div>
-            <div className="field"><label>전화번호 뒤 4자리</label><input type="text" value={dupQuery.phoneTail} onChange={e=>setDupQuery({...dupQuery,phoneTail:e.target.value})}/></div>
-            <div className="field"><label>담당 지역</label><input type="text" value={dupQuery.region} onChange={e=>setDupQuery({...dupQuery,region:e.target.value})}/></div>
+            <div className="field"><label>비상연락 대상자 이름</label><input type="text" value={emergency.name} onChange={e=>setEmergency({...emergency,name:e.target.value})}/></div>
+            <div className="field"><label>관계</label><input type="text" placeholder="예: 자녀" value={emergency.relation} onChange={e=>setEmergency({...emergency,relation:e.target.value})}/></div>
+            <div className="field"><label>비상연락처</label><input type="text" value={emergency.phone} onChange={e=>setEmergency({...emergency,phone:e.target.value})}/></div>
           </div>
-          <hr className="rule"/>
-          {dupCandidates.length>0 ? (
-            <div>
-              <p className="small">유사한 기존 대상자가 있습니다. 동일인이면 기존 프로필을 열어주세요.</p>
-              {dupCandidates.map(c=>(
-                <div key={c.id} className="kv"><span>{c.alias} · {c.birthYear}년생 · {c.region}</span>
-                  <button className="btn btn--sm" onClick={()=>setNav({screen:'client', params:{id:c.id}})}>기존 프로필 열기</button></div>
-              ))}
-            </div>
-          ) : <p className="small">유사 후보가 없습니다. 새로 등록을 진행할 수 있습니다.</p>}
-          <div style={{marginTop:14, display:'flex', justifyContent:'flex-end', gap:8}}>
-            <button className="btn btn--primary" onClick={()=>{setCheckedDup(true); setStep(1);}}>중복 없음 · 다음</button>
-          </div>
-        </div>
-      )}
+          <label className="checkline" style={{marginTop:10}}><input type="checkbox" checked={emergency.consent} onChange={e=>setEmergency({...emergency,consent:e.target.checked})}/> 긴급 상황 연락 동의 여부</label>
+        </>)}
+      </div>
 
-      {step===1 && (
-        <div className="card" style={{maxWidth:640}}>
-          <div className="form-grid">
-            <div className="field"><label>사례번호</label><input type="text" className="mono" value={form.caseNo} readOnly/></div>
-            <div className="field"><label>가명</label><input type="text" placeholder="예: 은행나무 어르신" value={form.alias} onChange={e=>setForm({...form,alias:e.target.value})}/></div>
-            <div className="field"><label>출생연도</label><input type="text" value={form.birthYear} onChange={e=>setForm({...form,birthYear:e.target.value})}/></div>
-            <div className="field"><label>성별</label>
-              <select value={form.gender} onChange={e=>setForm({...form,gender:e.target.value})}><option>여</option><option>남</option></select>
-            </div>
-            <div className="field"><label>최소 위치정보(지역)</label><input type="text" placeholder="예: 광주 서구" value={form.region} onChange={e=>setForm({...form,region:e.target.value})}/></div>
-            <div className="field"><label>담당자</label>
-              <select value={form.managerId} onChange={e=>setForm({...form,managerId:e.target.value})}>
-                {state.caseworkers.map(w=>(<option key={w.id} value={w.id}>{w.name}</option>))}
-              </select>
-            </div>
-          </div>
-          <p className="small" style={{marginTop:10}}>주민번호 전체와 불필요한 가족사는 수집하지 않습니다.</p>
-          <div style={{marginTop:14, display:'flex', justifyContent:'space-between'}}>
-            <button className="btn" onClick={()=>setStep(0)}>이전</button>
-            <button className="btn btn--primary" onClick={()=>setStep(2)}>다음</button>
-          </div>
-        </div>
-      )}
+      <div className="card" style={{maxWidth:720, marginBottom:16}}>
+        <div className="dl" style={{fontWeight:600, marginBottom:10, fontSize:13}}>동의 항목</div>
+        <p className="small" style={{marginBottom:10}}>목적별로 동의를 구분하여 저장하며, 연계 시점에 재확인하고 철회일을 관리합니다.</p>
+        {CONSENT_ITEMS.map(ci=>(
+          <label key={ci.key} className="checkline"><input type="checkbox" checked={consents[ci.key]} onChange={e=>setConsents({...consents,[ci.key]:e.target.checked})}/> {ci.label}</label>
+        ))}
+        <div className="kv" style={{marginTop:8}}><span className="k">동의 일자</span><span className="mono">{isoDaysAgo(0)}</span></div>
+        {!consents.agency && <p className="small" style={{marginTop:6, color:'var(--warn)'}}>기관 연계 동의가 없어도 대상자 등록은 가능하지만, 등록 후 기관 연계 버튼은 비활성화됩니다.</p>}
+      </div>
 
-      {step===2 && (
-        <div className="card" style={{maxWidth:640}}>
-          <div className="form-grid">
-            <div className="field"><label>선호 연락방법</label>
-              <select value={contact.contactPref} onChange={e=>setContact({...contact,contactPref:e.target.value})}><option>전화</option><option>방문</option><option>전화·방문 병행</option></select>
-            </div>
-            <div className="field"><label>통화 가능 시간</label><input type="text" placeholder="예: 오전 9시~11시" value={contact.contactHours} onChange={e=>setContact({...contact,contactHours:e.target.value})}/></div>
-            <div className="field"><label>비상연락 가능 여부</label>
-              <select value={contact.emergencyContact} onChange={e=>setContact({...contact,emergencyContact:e.target.value})}><option>없음</option><option>있음(자녀)</option><option>있음(이웃)</option><option>있음(기타)</option></select>
-            </div>
-          </div>
-          <p className="small" style={{marginTop:10}}>비상연락처 등록이 보호자 자동 알림을 의미하지는 않습니다.</p>
-          <div style={{marginTop:14, display:'flex', justifyContent:'space-between'}}>
-            <button className="btn" onClick={()=>setStep(1)}>이전</button>
-            <button className="btn btn--primary" onClick={()=>setStep(3)}>다음</button>
-          </div>
+      <div className="card" style={{maxWidth:720}}>
+        <div className="dl" style={{fontWeight:600, marginBottom:10, fontSize:13}}>최종 확인</div>
+        <div className="kv"><span className="k">사례번호</span><span className="mono">{caseNo}</span></div>
+        <div className="kv"><span className="k">이름 · 닉네임</span><span>{form.name || '(미입력)'} · {nicknameFull || '(미입력)'}</span></div>
+        <div className="kv"><span className="k">출생연도 · 성별</span><span>{form.birthYear || '(미입력)'}년 · {form.gender}</span></div>
+        <div className="kv"><span className="k">전화번호</span><span>{form.phone || '(미입력)'}</span></div>
+        <div className="kv"><span className="k">지역 · 담당자</span><span>{form.region} · {(state.caseworkers.find(w=>w.id===form.managerId)||{}).name || '(미배정)'}</span></div>
+        <div className="kv"><span className="k">비상연락망</span><span>{hasEmergency==='있음' ? (emergency.name||'(미입력)')+' · '+(emergency.relation||'(미입력)')+' · '+(emergency.phone||'(미입력)') : '없음'}</span></div>
+        <div className="kv"><span className="k">동의</span><span>{CONSENT_ITEMS.filter(ci=>consents[ci.key]).length}/{CONSENT_ITEMS.length} 항목 동의</span></div>
+        <div style={{marginTop:14, display:'flex', justifyContent:'flex-end'}}>
+          <button className="btn btn--primary" disabled={!canSubmit} onClick={finish}>{submitting?'등록 중...':'대상자 등록'}</button>
         </div>
-      )}
-
-      {step===3 && (
-        <div className="card" style={{maxWidth:640}}>
-          <p className="small" style={{marginBottom:10}}>목적별로 동의를 구분하여 저장하며, 연계 시점에 재확인하고 철회일을 관리합니다.</p>
-          <label className="checkline"><input type="checkbox" checked={consents.ai} onChange={e=>setConsents({...consents,ai:e.target.checked})}/> AI 분석(기록 구조화·변화 비교) 동의</label>
-          <label className="checkline"><input type="checkbox" checked={consents.agency} onChange={e=>setConsents({...consents,agency:e.target.checked})}/> 외부기관 연계(정책·서비스 의뢰) 동의</label>
-          <label className="checkline"><input type="checkbox" checked={consents.relative} onChange={e=>setConsents({...consents,relative:e.target.checked})}/> 관계인 연락(보호자·이웃) 동의</label>
-          <div style={{marginTop:14, display:'flex', justifyContent:'space-between'}}>
-            <button className="btn" onClick={()=>setStep(2)}>이전</button>
-            <button className="btn btn--primary" onClick={()=>setStep(4)}>다음</button>
-          </div>
-        </div>
-      )}
-
-      {step===4 && (
-        <div className="card" style={{maxWidth:640}}>
-          <h3 style={{marginBottom:10, fontSize:15}}>등록 내용 확인</h3>
-          <div className="kv"><span className="k">사례번호</span><span className="mono">{form.caseNo}</span></div>
-          <div className="kv"><span className="k">가명</span><span>{form.alias || '(미입력)'}</span></div>
-          <div className="kv"><span className="k">지역 · 담당자</span><span>{form.region || '(미입력)'} · {(state.caseworkers.find(w=>w.id===form.managerId)||{}).name || '(미배정)'}</span></div>
-          <div className="kv"><span className="k">연락 설정</span><span>{contact.contactPref} · {contact.contactHours || '(미입력)'}</span></div>
-          <div className="kv"><span className="k">동의</span><span>{['ai','agency','relative'].filter(k=>consents[k]).length}/3 항목 동의</span></div>
-          <p className="small" style={{marginTop:10}}>완료 후 평소상태 등록으로 이어져, 이후 변화 비교의 기준값을 만듭니다.</p>
-          <div style={{marginTop:14, display:'flex', justifyContent:'space-between'}}>
-            <button className="btn" onClick={()=>setStep(3)}>이전</button>
-            <button className="btn btn--primary" onClick={finish}>등록 완료 · 평소상태 등록으로</button>
-          </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -1626,9 +1640,10 @@ function CheckinForm({state, setState, setNav, clientId, currentCaseworkerId}){
 /* ============================================================
    화면 6. AI 분석 검토
    ============================================================ */
-function AnalysisReview({state, setState, setNav, recordId, role}){
+function AnalysisReview({state, setState, setNav, recordId, role, currentCaseworkerId}){
   const rec = state.records.find(r=>r.id===recordId);
   const client = rec ? state.clients.find(c=>c.id===rec.clientId) : null;
+  const currentCaseworkerName = (state.caseworkers.find(w=>w.id===currentCaseworkerId)||{}).name || '생활지원사';
   const baseline = rec ? state.baselines.find(b=>b.clientId===rec.clientId) : null;
   const priorSignalsForClient = rec ? state.signals.filter(s=>s.clientId===rec.clientId && s.recordId!==rec.id) : [];
   const engineState = useEmbeddingEngineState();
@@ -1683,7 +1698,8 @@ function AnalysisReview({state, setState, setNav, recordId, role}){
   if(!rec) return <Empty>기록을 찾을 수 없습니다.</Empty>;
 
   const alreadySignaled = state.signals.some(s=>s.recordId===recordId);
-  const canApprove = role==='전담사회복지사';
+  // 생활지원사가 판정 수정·위험영역 승인/기각·검토 승인까지 직접 수행할 수 있다 (역할 제한 없음).
+  const canApprove = true;
 
   function setDecision(domain, decision){
     setRows(rs=>rs.map(r=>r.domain===domain?{...r,decision}:r));
@@ -1716,7 +1732,7 @@ function AnalysisReview({state, setState, setNav, recordId, role}){
         clientId:rec.clientId, recordId:rec.id, domain:r.domain, label:r.label, isAnomaly, status:r.status, decision:r.decision,
         excerpt:r.excerpt, time:r.time, changeType:r.changeType, urgency,
         analyzerMethod: r.method || 'rule', similarity: r.similarity!=null ? r.similarity : null, aiSuggestedStatus: r.aiStatus,
-        reviewedBy:'전담사회복지사(현재 세션)', reviewNote: note || 'AI 제안 확인 후 승인',
+        reviewedBy:currentCaseworkerName, reviewNote: note || 'AI 제안 확인 후 승인',
         at:now, fallbackDeadline: rec.nextCheckDate,
       });
       signals = result.signals;
@@ -1728,7 +1744,7 @@ function AnalysisReview({state, setState, setNav, recordId, role}){
     });
 
     setState(s=>({...s, signals,
-      audit:[...s.audit, {id:uid('LOG'), at:now, actor:'전담사회복지사', action:'AI 분석 검토·승인',
+      audit:[...s.audit, {id:uid('LOG'), at:now, actor:currentCaseworkerName, action:'AI 분석 검토·승인',
         detail:client.caseNo+(changeLog.length?' · '+changeLog.join(' / '):' · 변경 없음')}]}));
     setNav({screen:'client', params:{id:rec.clientId}});
   }
@@ -1782,7 +1798,6 @@ function AnalysisReview({state, setState, setNav, recordId, role}){
             <label>검토 사유 / 수정 메모</label>
             <textarea value={note} onChange={e=>setNote(e.target.value)} placeholder="AI 제안에 대한 승인·수정·기각 사유를 남겨주세요."/>
           </div>
-          {!canApprove && <p className="small" style={{marginTop:8}}>생활지원사는 이 화면에서 직접 승인할 수 없습니다. 확인한 내용을 담당 전담사회복지사에게 전달해 주세요.</p>}
           {alreadySignaled && <p className="small" style={{marginTop:8, color:'var(--warn)'}}>이 기록은 이미 검토·승인되었습니다. 다시 승인하면 지금 화면의 최종 상태로 위험신호가 갱신됩니다.</p>}
           <div style={{marginTop:14}}>
             <button className="btn btn--primary" disabled={!canApprove || !rows} onClick={approve}>{alreadySignaled ? '검토 결과 재승인 · 신호 갱신' : '검토 결과 승인 · 신호 생성'}</button>
@@ -2023,9 +2038,10 @@ function ClientProfile({state, setState, setNav, id, role}){
   const signals = state.signals.filter(s=>s.clientId===id);
   const referrals = state.referrals.filter(r=>r.clientId===id);
   const canEditConsent = role!=='생활지원사';
+  const consentLabel = {privacy:'개인정보 수집·이용', ai:'AI분석', agency:'기관연계', emergency:'비상상황연락'};
   function toggleConsent(key){
     setState(st=>({...st, clients: st.clients.map(c=>c.id===id?{...c, consents:{...c.consents, [key]:!c.consents[key]}}:c),
-      audit:[...st.audit, {id:uid('LOG'), at:new Date().toISOString(), actor:'전담사회복지사', action:'동의 정보 수정', detail:client.caseNo+' · '+({ai:'AI분석',agency:'기관연계',relative:'관계인연락'}[key])+' 동의 '+(!client.consents[key]?'설정':'해제')}]}));
+      audit:[...st.audit, {id:uid('LOG'), at:new Date().toISOString(), actor:'전담사회복지사', action:'동의 정보 수정', detail:client.caseNo+' · '+(consentLabel[key]||key)+' 동의 '+(!client.consents[key]?'설정':'해제')}]}));
   }
 
   const events = [
@@ -2050,17 +2066,21 @@ function ClientProfile({state, setState, setNav, id, role}){
         <div>
           <div className="card" style={{marginBottom:16}}>
             <div className="kv"><span className="k">사례번호</span><span className="mono">{client.caseNo}</span></div>
+            <div className="kv"><span className="k">이름</span><span>{client.name || '-'}</span></div>
             <div className="kv"><span className="k">출생연도 · 성별</span><span>{client.birthYear}년 · {client.gender}</span></div>
+            <div className="kv"><span className="k">전화번호</span><span className="mono">{client.phone || '-'}</span></div>
             <div className="kv"><span className="k">지역</span><span>{client.region}</span></div>
             <div className="kv"><span className="k">담당자</span><span>{(state.caseworkers.find(w=>w.id===client.managerId)||{}).name || '미배정'}</span></div>
-            <div className="kv"><span className="k">연락</span><span>{client.contactPref} · {client.contactHours}</span></div>
+            <div className="kv"><span className="k">비상연락망</span><span>{client.emergency && client.emergency.has==='있음' ? client.emergency.name+' · '+client.emergency.relation+' · '+client.emergency.phone+(client.emergency.consent?' · 연락동의':' · 연락동의 없음') : '없음'}</span></div>
           </div>
 
           <div className="card" style={{marginBottom:16}}>
             <div className="dl" style={{fontWeight:600, marginBottom:8, fontSize:13}}>동의 확인·수정</div>
-            <label className="checkline"><input type="checkbox" checked={!!client.consents.ai} disabled={!canEditConsent} onChange={()=>toggleConsent('ai')}/> AI 분석(기록 구조화·변화 비교) 동의</label>
-            <label className="checkline"><input type="checkbox" checked={!!client.consents.agency} disabled={!canEditConsent} onChange={()=>toggleConsent('agency')}/> 외부기관 연계(정책·서비스 의뢰) 동의</label>
-            <label className="checkline"><input type="checkbox" checked={!!client.consents.relative} disabled={!canEditConsent} onChange={()=>toggleConsent('relative')}/> 관계인 연락(보호자·이웃) 동의</label>
+            <label className="checkline"><input type="checkbox" checked={!!client.consents.privacy} disabled={!canEditConsent} onChange={()=>toggleConsent('privacy')}/> 개인정보 수집·이용 동의</label>
+            <label className="checkline"><input type="checkbox" checked={!!client.consents.ai} disabled={!canEditConsent} onChange={()=>toggleConsent('ai')}/> AI 분석 활용 동의</label>
+            <label className="checkline"><input type="checkbox" checked={!!client.consents.agency} disabled={!canEditConsent} onChange={()=>toggleConsent('agency')}/> 기관 연계 동의</label>
+            <label className="checkline"><input type="checkbox" checked={!!client.consents.emergency} disabled={!canEditConsent} onChange={()=>toggleConsent('emergency')}/> 비상 상황 연락 동의</label>
+            <div className="kv" style={{marginTop:6}}><span className="k">동의 일자</span><span className="mono">{client.consents.date || '-'}</span></div>
             {!client.consents.agency && <p className="small" style={{marginTop:6, color:'var(--warn)'}}>기관 연계 동의가 없어 이 대상자는 연계 후보 생성·연계정보 전송이 제한됩니다.</p>}
             {!canEditConsent && <p className="small" style={{marginTop:6}}>생활지원사 역할은 동의 정보를 수정할 수 없습니다.</p>}
           </div>
@@ -2323,7 +2343,7 @@ function App(){
     dashboard:['오늘의 업무','담당자(나): '+currentCaseworker.name],
     clients:['대상자 목록', currentCaseworker.name+' 담당 대상자'],
     client:['대상자 상세','타임라인 · 평소상태 · 신호'],
-    newClient:['신규 대상자 등록','중복확인 → 기본정보 → 동의'],
+    newClient:['신규 대상자 등록','기본정보 · 비상연락망 · 동의를 한 화면에서 입력'],
     baseline:['평소상태 등록','변화 비교의 기준값'],
     checkin:['안부 확인','질문추천 · 전화·방문 기록'],
     analysis:['AI 분석 검토','구조화 결과 승인·수정·기각'],
@@ -2338,10 +2358,10 @@ function App(){
   if(nav.screen==='dashboard') body = <Dashboard state={scopedState} setNav={setNav} role={role}/>;
   else if(nav.screen==='clients') body = <ClientList state={scopedState} setNav={setNav} query={query}/>;
   else if(nav.screen==='client') body = <ClientProfile state={state} setState={setState} setNav={setNav} id={nav.params.id} role={role}/>;
-  else if(nav.screen==='newClient') body = <NewClientWizard state={state} setState={setState} setNav={setNav} currentCaseworkerId={currentCaseworkerId}/>;
+  else if(nav.screen==='newClient') body = <NewClientForm state={state} setState={setState} setNav={setNav} currentCaseworkerId={currentCaseworkerId}/>;
   else if(nav.screen==='baseline') body = <BaselineForm state={state} setState={setState} setNav={setNav} clientId={nav.params.clientId} isNew={nav.params.isNew}/>;
   else if(nav.screen==='checkin') body = <CheckinForm state={state} setState={setState} setNav={setNav} clientId={nav.params.clientId} currentCaseworkerId={currentCaseworkerId}/>;
-  else if(nav.screen==='analysis') body = <AnalysisReview state={state} setState={setState} setNav={setNav} recordId={nav.params.recordId} role={role}/>;
+  else if(nav.screen==='analysis') body = <AnalysisReview state={state} setState={setState} setNav={setNav} recordId={nav.params.recordId} role={role} currentCaseworkerId={currentCaseworkerId}/>;
   else if(nav.screen==='priority') body = <PriorityDashboard state={scopedState} setNav={setNav}/>;
   else if(nav.screen==='signal') body = <SignalDetail state={state} setState={setState} setNav={setNav} id={nav.params.id} role={role}/>;
   else if(nav.screen==='policies') body = <PolicyDB state={state}/>;
