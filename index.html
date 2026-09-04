@@ -1174,6 +1174,40 @@ function BaselineBadge({v}){
 function Empty({children}){
   return <div className="empty">{children}</div>;
 }
+// 대상자 상세·안부확인 화면이 공유하는 타임라인. state.records/signals/referrals가 바뀌면
+// (예: 안부확인 저장) 두 화면 모두 같은 소스에서 즉시 다시 계산되어 동일하게 반영된다.
+function ClientTimeline({state, client, role, title}){
+  const id = client.id;
+  const baseline = state.baselines.find(b=>b.clientId===id);
+  const records = state.records.filter(r=>r.clientId===id).sort((a,b)=>b.datetime.localeCompare(a.datetime));
+  const signals = state.signals.filter(s=>s.clientId===id);
+  const referrals = state.referrals.filter(r=>r.clientId===id);
+
+  const events = [
+    {at:client.registeredAt+'T09:00:00', type:'등록', title:'신규 대상자 등록', body:'사례번호 '+client.caseNo},
+    ...(baseline?[{at:baseline.date+'T09:00:00', type:'평소상태', title:'평소상태 등록(v'+baseline.version+')', body:DOMAINS.filter(d=>baseline.domains[d.key]==='어려움').map(d=>d.label).join(', ')||'전 영역 정상·미확인'}]:[]),
+    ...records.map(r=>({at:r.datetime, type:'안부기록', title:r.method+' 상담', body:r.memo})),
+    ...signals.map(s=>({at:s.createdAt, type:'신호', title:s.label+' · '+s.urgency, body:s.reviewNote})),
+    ...referrals.flatMap(r=>r.history.map(h=>({at:h.at, type:'연계', title:(POLICY_SEED.find(p=>p.id===r.policyId)||{}).name+' · '+r.status, body:h.note}))),
+  ].sort((a,b)=>b.at.localeCompare(a.at));
+
+  return (
+    <div>
+      <div className="dl" style={{fontWeight:600, marginBottom:10, fontSize:13}}>{title || '타임라인'}</div>
+      <div className="timeline">
+        {events.map((e,i)=>(
+          <div className="tl-item" key={i}>
+            <div className="tl-dot"></div>
+            <div className="tl-when">{fmtDateTime(e.at)} · {e.type}</div>
+            <div className="tl-title">{e.title}</div>
+            {e.body && <div className="tl-body">{role==='기관관리자' && e.type==='안부기록' ? <span className="locked">업무 목적 외 상세 원문 열람 제한</span> : e.body}</div>}
+          </div>
+        ))}
+        {events.length===0 && <Empty>기록이 없습니다.</Empty>}
+      </div>
+    </div>
+  );
+}
 
 /* ============================================================
    사이드바 / 상단바
@@ -1597,7 +1631,7 @@ function BaselineForm({state, setState, setNav, clientId, isNew}){
 /* ============================================================
    화면 5. 안부 확인 (질문추천 + 전화/방문 기록)
    ============================================================ */
-function CheckinForm({state, setState, setNav, clientId, currentCaseworkerId}){
+function CheckinForm({state, setState, setNav, clientId, currentCaseworkerId, role}){
   const client = state.clients.find(c=>c.id===clientId);
   const currentCaseworkerName = (state.caseworkers.find(w=>w.id===currentCaseworkerId)||{}).name || '생활지원사';
   const baseline = state.baselines.find(b=>b.clientId===clientId);
@@ -1631,55 +1665,63 @@ function CheckinForm({state, setState, setNav, clientId, currentCaseworkerId}){
     <div>
       <div className="section-head"><h2>{client.alias} · 안부 확인</h2></div>
 
-      <div className="card" style={{marginBottom:16}}>
-        <div className="dl" style={{fontWeight:600, marginBottom:8, fontSize:13}}>추천 질문</div>
-        <div style={{marginBottom:8}} className="small">정기질문</div>
-        <div className="tag-row" style={{marginBottom:12}}>
-          {QUESTIONS_REGULAR.map(q=>(<span key={q} className={"tag"+(askedTags.includes(q)?'':' off')} onClick={()=>toggleTag(q)}>{q}</span>))}
-        </div>
-        {unconfirmed.length>0 && <>
-          <div style={{marginBottom:8}} className="small">미확인질문 (직전 기록에서 확인되지 않은 영역)</div>
-          <div className="tag-row" style={{marginBottom:12}}>
-            {unconfirmed.map(d=>(<span key={d.key} className={"tag"+(askedTags.includes(d.hint)?'':' off')} onClick={()=>toggleTag(d.hint)}>{d.label}: {d.hint}</span>))}
+      <div className="two-col">
+        <div>
+          <div className="card" style={{marginBottom:16}}>
+            <div className="dl" style={{fontWeight:600, marginBottom:8, fontSize:13}}>추천 질문</div>
+            <div style={{marginBottom:8}} className="small">정기질문</div>
+            <div className="tag-row" style={{marginBottom:12}}>
+              {QUESTIONS_REGULAR.map(q=>(<span key={q} className={"tag"+(askedTags.includes(q)?'':' off')} onClick={()=>toggleTag(q)}>{q}</span>))}
+            </div>
+            {unconfirmed.length>0 && <>
+              <div style={{marginBottom:8}} className="small">미확인질문 (직전 기록에서 확인되지 않은 영역)</div>
+              <div className="tag-row" style={{marginBottom:12}}>
+                {unconfirmed.map(d=>(<span key={d.key} className={"tag"+(askedTags.includes(d.hint)?'':' off')} onClick={()=>toggleTag(d.hint)}>{d.label}: {d.hint}</span>))}
+              </div>
+            </>}
+            {recheckDomains.length>0 && <>
+              <div style={{marginBottom:8}} className="small">재확인질문 (이전 위험신호 지속 여부)</div>
+              <div className="tag-row" style={{marginBottom:12}}>
+                {recheckDomains.map(d=>(<span key={d.key} className={"tag"+(askedTags.includes('재확인:'+d.label)?'':' off')} onClick={()=>toggleTag('재확인:'+d.label)}>{d.label} 지속·호전·악화 확인</span>))}
+              </div>
+            </>}
+            <div style={{marginBottom:8}} className="small">상황질문 (선택)</div>
+            <div className="tag-row">
+              {QUESTIONS_SITUATION.map(s=>(<span key={s.tag} className={"tag"+(situationTag===s.tag?'':' off')} onClick={()=>setSituationTag(situationTag===s.tag?null:s.tag)}>{s.tag}: {s.q}</span>))}
+            </div>
           </div>
-        </>}
-        {recheckDomains.length>0 && <>
-          <div style={{marginBottom:8}} className="small">재확인질문 (이전 위험신호 지속 여부)</div>
-          <div className="tag-row" style={{marginBottom:12}}>
-            {recheckDomains.map(d=>(<span key={d.key} className={"tag"+(askedTags.includes('재확인:'+d.label)?'':' off')} onClick={()=>toggleTag('재확인:'+d.label)}>{d.label} 지속·호전·악화 확인</span>))}
-          </div>
-        </>}
-        <div style={{marginBottom:8}} className="small">상황질문 (선택)</div>
-        <div className="tag-row">
-          {QUESTIONS_SITUATION.map(s=>(<span key={s.tag} className={"tag"+(situationTag===s.tag?'':' off')} onClick={()=>setSituationTag(situationTag===s.tag?null:s.tag)}>{s.tag}: {s.q}</span>))}
-        </div>
-      </div>
 
-      <div className="card" style={{maxWidth:720}}>
-        <div className="field" style={{marginBottom:14}}>
-          <label>접촉 방식</label>
-          <div className="seg" style={{maxWidth:280}}>
-            <button className={method==='전화'?'on':''} onClick={()=>setMethod('전화')}>전화</button>
-            <button className={method==='방문'?'on':''} onClick={()=>setMethod('방문')}>방문</button>
+          <div className="card">
+            <div className="field" style={{marginBottom:14}}>
+              <label>접촉 방식</label>
+              <div className="seg" style={{maxWidth:280}}>
+                <button className={method==='전화'?'on':''} onClick={()=>setMethod('전화')}>전화</button>
+                <button className={method==='방문'?'on':''} onClick={()=>setMethod('방문')}>방문</button>
+              </div>
+            </div>
+            <div className="field" style={{marginBottom:14}}>
+              <label>대상자 진술 <span className="hint">(전화·방문 공통 — 어르신이 실제로 말한 내용)</span></label>
+              <textarea value={statement} onChange={e=>setStatement(e.target.value)} placeholder="예: 어제부터 입맛이 없어서 죽만 조금 드셨고, 약은 아침에 깜빡했다고 함."/>
+            </div>
+            {method==='방문' && (
+              <div className="field" style={{marginBottom:14}}>
+                <label>담당자 관찰 <span className="hint">(방문 시에만 — 생활지원사가 직접 관찰한 사실)</span></label>
+                <textarea value={observation} onChange={e=>setObservation(e.target.value)} placeholder="예: 방 안 정리가 덜 되어 있고 평소보다 말수가 적음."/>
+              </div>
+            )}
+            <div className="field" style={{maxWidth:220}}>
+              <label>다음 확인일</label>
+              <input type="date" value={nextDate} onChange={e=>setNextDate(e.target.value)}/>
+            </div>
+            <div style={{marginTop:16, display:'flex', gap:8}}>
+              <button className="btn" onClick={()=>setNav({screen:'client', params:{id:clientId}})}>임시저장</button>
+              <button className="btn btn--primary" disabled={!statement && !observation} onClick={submit}>기록 저장 · AI 분석 보기</button>
+            </div>
           </div>
         </div>
-        <div className="field" style={{marginBottom:14}}>
-          <label>대상자 진술 <span className="hint">(전화·방문 공통 — 어르신이 실제로 말한 내용)</span></label>
-          <textarea value={statement} onChange={e=>setStatement(e.target.value)} placeholder="예: 어제부터 입맛이 없어서 죽만 조금 드셨고, 약은 아침에 깜빡했다고 함."/>
-        </div>
-        {method==='방문' && (
-          <div className="field" style={{marginBottom:14}}>
-            <label>담당자 관찰 <span className="hint">(방문 시에만 — 생활지원사가 직접 관찰한 사실)</span></label>
-            <textarea value={observation} onChange={e=>setObservation(e.target.value)} placeholder="예: 방 안 정리가 덜 되어 있고 평소보다 말수가 적음."/>
-          </div>
-        )}
-        <div className="field" style={{maxWidth:220}}>
-          <label>다음 확인일</label>
-          <input type="date" value={nextDate} onChange={e=>setNextDate(e.target.value)}/>
-        </div>
-        <div style={{marginTop:16, display:'flex', gap:8}}>
-          <button className="btn" onClick={()=>setNav({screen:'client', params:{id:clientId}})}>임시저장</button>
-          <button className="btn btn--primary" disabled={!statement && !observation} onClick={submit}>기록 저장 · AI 분석 보기</button>
+
+        <div className="card">
+          <ClientTimeline state={state} client={client} role={role} title={'이전 이력 · '+client.alias}/>
         </div>
       </div>
     </div>
@@ -2083,23 +2125,12 @@ function ClientProfile({state, setState, setNav, id, role}){
   const client = state.clients.find(c=>c.id===id);
   if(!client) return <Empty>대상자를 찾을 수 없습니다.</Empty>;
   const baseline = state.baselines.find(b=>b.clientId===id);
-  const records = state.records.filter(r=>r.clientId===id).sort((a,b)=>b.datetime.localeCompare(a.datetime));
-  const signals = state.signals.filter(s=>s.clientId===id);
-  const referrals = state.referrals.filter(r=>r.clientId===id);
   const canEditConsent = role!=='생활지원사';
   const consentLabel = {privacy:'개인정보 수집·이용', ai:'AI분석', agency:'기관연계', emergency:'비상상황연락'};
   function toggleConsent(key){
     setState(st=>({...st, clients: st.clients.map(c=>c.id===id?{...c, consents:{...c.consents, [key]:!c.consents[key]}}:c),
       audit:[...st.audit, {id:uid('LOG'), at:new Date().toISOString(), actor:'전담사회복지사', action:'동의 정보 수정', detail:client.caseNo+' · '+(consentLabel[key]||key)+' 동의 '+(!client.consents[key]?'설정':'해제')}]}));
   }
-
-  const events = [
-    {at:client.registeredAt+'T09:00:00', type:'등록', title:'신규 대상자 등록', body:'사례번호 '+client.caseNo},
-    ...(baseline?[{at:baseline.date+'T09:00:00', type:'평소상태', title:'평소상태 등록(v'+baseline.version+')', body:DOMAINS.filter(d=>baseline.domains[d.key]==='어려움').map(d=>d.label).join(', ')||'전 영역 정상·미확인'}]:[]),
-    ...records.map(r=>({at:r.datetime, type:'안부기록', title:r.method+' 상담', body:r.memo})),
-    ...signals.map(s=>({at:s.createdAt, type:'신호', title:s.label+' · '+s.urgency, body:s.reviewNote})),
-    ...referrals.flatMap(r=>r.history.map(h=>({at:h.at, type:'연계', title:(POLICY_SEED.find(p=>p.id===r.policyId)||{}).name+' · '+r.status, body:h.note}))),
-  ].sort((a,b)=>b.at.localeCompare(a.at));
 
   return (
     <div>
@@ -2145,18 +2176,7 @@ function ClientProfile({state, setState, setNav, id, role}){
         </div>
 
         <div>
-          <div className="dl" style={{fontWeight:600, marginBottom:10, fontSize:13}}>타임라인</div>
-          <div className="timeline">
-            {events.map((e,i)=>(
-              <div className="tl-item" key={i}>
-                <div className="tl-dot"></div>
-                <div className="tl-when">{fmtDateTime(e.at)} · {e.type}</div>
-                <div className="tl-title">{e.title}</div>
-                {e.body && <div className="tl-body">{role==='기관관리자' && e.type==='안부기록' ? <span className="locked">업무 목적 외 상세 원문 열람 제한</span> : e.body}</div>}
-              </div>
-            ))}
-            {events.length===0 && <Empty>기록이 없습니다.</Empty>}
-          </div>
+          <ClientTimeline state={state} client={client} role={role}/>
         </div>
       </div>
     </div>
@@ -2409,7 +2429,7 @@ function App(){
   else if(nav.screen==='client') body = <ClientProfile state={state} setState={setState} setNav={setNav} id={nav.params.id} role={role}/>;
   else if(nav.screen==='newClient') body = <NewClientForm state={state} setState={setState} setNav={setNav} currentCaseworkerId={currentCaseworkerId}/>;
   else if(nav.screen==='baseline') body = <BaselineForm state={state} setState={setState} setNav={setNav} clientId={nav.params.clientId} isNew={nav.params.isNew}/>;
-  else if(nav.screen==='checkin') body = <CheckinForm state={state} setState={setState} setNav={setNav} clientId={nav.params.clientId} currentCaseworkerId={currentCaseworkerId}/>;
+  else if(nav.screen==='checkin') body = <CheckinForm state={state} setState={setState} setNav={setNav} clientId={nav.params.clientId} currentCaseworkerId={currentCaseworkerId} role={role}/>;
   else if(nav.screen==='analysis') body = <AnalysisReview state={state} setState={setState} setNav={setNav} recordId={nav.params.recordId} currentCaseworkerId={currentCaseworkerId}/>;
   else if(nav.screen==='priority') body = <PriorityDashboard state={scopedState} setNav={setNav}/>;
   else if(nav.screen==='signal') body = <SignalDetail state={state} setState={setState} setNav={setNav} id={nav.params.id} role={role}/>;
