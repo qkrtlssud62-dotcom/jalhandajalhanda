@@ -1293,6 +1293,7 @@ function Dashboard({state, setNav, role}){
   function Row({s}){
     const c = state.clients.find(cl=>cl.id===s.clientId);
     if(!c) return null;
+    const lastRec = state.records.filter(r=>r.clientId===c.id).sort((a,b)=>(b.datetime||'').localeCompare(a.datetime||''))[0];
     return (
       <tr className="clickable" onClick={()=>setNav({screen:'signal', params:{id:s.id}})}>
         <td>{c.alias}<div className="small">{c.caseNo}</div></td>
@@ -1300,6 +1301,8 @@ function Dashboard({state, setNav, role}){
         <td><UrgencyBadge level={s.urgency}/></td>
         <td>{s.excerpt}</td>
         <td>{s.deadline==='즉시'?'즉시':fmtDate(s.deadline)}</td>
+        <td>{lastRec?fmtDateTime(lastRec.datetime):'-'}</td>
+        <td><button className="btn btn--sm" onClick={e=>{e.stopPropagation(); setNav({screen:'checkin', params:{clientId:c.id}});}}>안부확인 시작</button></td>
       </tr>
     );
   }
@@ -1323,7 +1326,7 @@ function Dashboard({state, setNav, role}){
       ) : (
         <div className="table-wrap">
           <table>
-            <thead><tr><th>대상자</th><th>위험영역</th><th>단계</th><th>발견 근거</th><th>처리기한</th></tr></thead>
+            <thead><tr><th>대상자</th><th>위험영역</th><th>단계</th><th>발견 근거</th><th>처리기한</th><th>최근 접촉</th><th></th></tr></thead>
             <tbody>
               {[...urgent,...today,...overdue.filter(s=>!urgent.includes(s)&&!today.includes(s))].map(s=><Row key={s.id} s={s}/>)}
             </tbody>
