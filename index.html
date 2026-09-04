@@ -1327,7 +1327,9 @@ function Dashboard({state, setNav, role}){
   function Row({s}){
     const c = state.clients.find(cl=>cl.id===s.clientId);
     if(!c) return null;
-    const lastRec = state.records.filter(r=>r.clientId===c.id).sort((a,b)=>(b.datetime||'').localeCompare(a.datetime||''))[0];
+    // 이 신호가 실제로 발견/재확인된 접촉 시점(lastSeenAt)을 표시한다.
+    // 대상자의 가장 최근 안부기록(관련 없는 다른 접촉일 수 있음)을 쓰면
+    // 신호는 미처리 상태인데 접촉일만 오늘로 잘못 표시되는 문제가 생긴다.
     return (
       <tr className="clickable" onClick={()=>setNav({screen:'signal', params:{id:s.id}})}>
         <td>{c.alias}<div className="small">{c.caseNo}</div></td>
@@ -1335,7 +1337,7 @@ function Dashboard({state, setNav, role}){
         <td><UrgencyBadge level={s.urgency}/></td>
         <td>{s.excerpt}</td>
         <td>{s.deadline==='즉시'?'즉시':fmtDate(s.deadline)}</td>
-        <td>{lastRec?fmtDateTime(lastRec.datetime):'-'}</td>
+        <td>{s.lastSeenAt?fmtDateTime(s.lastSeenAt):'-'}</td>
         <td><button className="btn btn--sm" onClick={e=>{e.stopPropagation(); setNav({screen:'checkin', params:{clientId:c.id}});}}>안부확인 시작</button></td>
       </tr>
     );
@@ -1815,7 +1817,9 @@ function AnalysisReview({state, setState, setNav, recordId, currentCaseworkerId}
     rows.forEach(r=>{
       // 이번 통화에서 언급조차 안 된 영역(미확인, AI 제안에서 손대지 않음)은 완전히 건드리지 않는다.
       // 그런 영역까지 매번 훑으면 이번 통화와 무관한 다른 영역의 진행 중인 사건을 잘못 종결시키게 된다.
-      const touched = r.status==='이상' || r.aiStatus!==r.status;
+      // (단, 이번 통화에서 언급되어 '정상'으로 호전 확인된 영역은 미확인이 아니므로 반드시 건드려서
+      // 기존에 열려 있던 사건을 종결시켜야 한다 — 그렇지 않으면 이미 해소된 신호가 계속 미처리로 남는다.)
+      const touched = r.status!=='미확인' || r.aiStatus!==r.status;
       if(!touched) return;
       const isAnomaly = r.status==='이상' && r.decision==='승인';
       // 대상자·위험영역 기준으로 진행 중인 사건이 있으면(같은 기록 재검토 포함) 새 카드 대신 누적한다.
