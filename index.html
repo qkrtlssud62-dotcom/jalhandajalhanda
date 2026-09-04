@@ -356,7 +356,10 @@ const CASEWORKER_SEED = [
   {id:'W-4', name:'생활지원사 이○○'},
 ];
 
-const NEG_WORDS = ['없','못','안 ','않','어렵','힘들','감소','악화','불편','깜빡','잊','넘어지','어지럼','누락','중단','거부','싫다','부족','악해','저하','곤란','장벽','의심','미룸','미루'];
+// '아프다'·'기운이 없다'·'힘이 빠지다'류는 완곡하지만 명백한 증상 표현인데도 원래 목록에 없어
+// 정상·이상 판단 근거로 전혀 집히지 않았다(검증 결과 발견 ①·⑤ 수정 과정에서 드러난 연쇄 문제).
+const NEG_WORDS = ['없','못','안 ','않','어렵','힘들','감소','악화','불편','깜빡','잊','넘어지','어지럼','누락','중단','거부','싫다','부족','악해','저하','곤란','장벽','의심','미룸','미루',
+  '아프','아파','아팠','아픈','힘이 빠지','힘이 빠진','힘이 빠져','기운이 없','기운 없'];
 const POS_WORDS = ['잘','좋아','정상','괜찮','문제 없','이상 없','잘 지내','잘 드심','잘 드셨','잘 주무','잘 챙'];
 
 /* 1글자짜리 NEG_WORDS/POS_WORDS('못','잘','잊' 등)는 다른 단어 속 글자와 우연히 겹쳐 오탐을 낸다.
@@ -379,7 +382,25 @@ function includesAnyGuarded(text, words){
   });
 }
 
+/* 검증 결과 발견 ②: "~은 확인하지 못함"·"~은 답하지 않음"처럼 담당자가 그 영역을 아예 묻지
+   못했다는 뜻의 문구는, NEG_WORDS의 '못'·'않'과 우연히 겹쳐서 실제로는 아무 근거가 없는데도
+   '이상'으로 오판정됐다. 이런 문구는 원래 '미확인'으로 남아야 할 부분응답이므로, 부정어 판정
+   전에 이 문구만 먼저 제거해 남은 부분에 진짜 부정 근거가 있는지로 판단한다. */
+const UNCERTAIN_PHRASES = [
+  '확인하지 못', '확인은 하지 못', '답하지 않', '답을 하지 않', '묻지 못', '묻지는 못',
+  '기억하지 못', '기억이 나지 않', '모르겠다고', '모른다고',
+];
+function stripUncertainPhrases(text){
+  return UNCERTAIN_PHRASES.reduce((t,p)=>t.split(p).join(''), text);
+}
+
 const EMERGENCY_WORDS = ['자살','자해','없어지고 싶','의미가 없','죽고 싶','화재','불이 나','의식이','쓰러지','학대','폭력','때리','숨을 못'];
+
+/* 검증 결과 발견 ④: "넘어졌다/낙상" 같은 낙상 표현이 전혀 없는 즉시 도움요청(예: 극심한 거동불능 +
+   당장 와달라는 표현)은 EMERGENCY_WORDS·FALL_WORDS 어디에도 걸리지 않아 완전히 무신호 처리됐다.
+   "혼자서도 못 움직이겠다"류의 명확한 거동불능 + "빨리 와달라"는 긴급 재촉이 함께 있는 경우만
+   좁게 잡아, 단순히 "와줄 수 있냐"고 묻는 정도의 완곡한 요청(1회차 수준)까지 과잉 격상하지 않는다. */
+const EMERGENCY_HELP_WORDS = ['혼자 못 움직이','못 움직이겠','움직일 수가 없','일어날 수가 없','빨리 와주세요','빨리 와 주세요','빨리 와줘','빨리 와 줘'];
 
 /* 낙상 긴급 조합 판정: '넘어졌다' 한 마디만으로 무조건 긴급 처리하지 않는다.
    낙상 표현 + 아래 심각 징후(일어나지 못함/머리 충격/출혈/의식 변화/심한 통증·움직임 곤란) 중
@@ -585,10 +606,15 @@ function analyzeMemo(memo, baseline){
   const text = memo || '';
   const clauses = splitClauses(text);
   const rows = DOMAINS.map(d=>{
-    const hit = d.kw.find(k=>text.includes(k));
-    if(!hit){
+    // 검증 결과 발견 ⑤: 예전에는 kw 배열에 등록된 순서상 먼저 나오는 키워드를 그대로 썼는데,
+    // 그러면 실제 텍스트에서는 뒤쪽에 있는(때로는 이 영역과 무관한) 문장이 근거로 채택되는
+    // 경우가 있었다. 배열 순서가 아니라 텍스트에서 가장 먼저 등장하는 키워드를 근거로 삼는다.
+    const hitCandidates = d.kw.map(k=>({k, idx:text.indexOf(k)})).filter(c=>c.idx>=0);
+    if(hitCandidates.length===0){
       return {domain:d.key,label:d.label,status:'미확인',content:'이번 통화·방문에서 확인되지 않음',time:'-',excerpt:'원문 없음'};
     }
+    hitCandidates.sort((a,b)=>a.idx-b.idx);
+    const hit = hitCandidates[0].k;
     // 이 도메인 키워드가 실제로 등장한 문장(절)만 골라, 그 절 전체를 근거(excerpt)로 쓰고 긍정·부정도 그 범위에서만 판정한다
     const clause = clauses.find(c=>c.includes(hit)) || text;
     const excerpt = clause.trim();
@@ -600,7 +626,10 @@ function analyzeMemo(memo, baseline){
       // '약을 깜빡'류 복약 누락은 이 목록에 없으므로 여기서 걸리지 않고 복약 영역에만 남는다.
       return {domain:d.key,label:d.label,status:'이상',content:d.label+' 저하 신호 관찰',time,excerpt};
     }
-    const neg = includesAnyGuarded(clause, NEG_WORDS);
+    // 부정어 판정 전에 "확인하지 못함"류 미응답 문구를 먼저 제거한다 — 그 문구 자체가
+    // '못'·'않' 때문에 이상 근거로 오판되지 않도록, 남은 부분에 진짜 부정 근거가 있는지만 본다.
+    const negBasis = stripUncertainPhrases(clause);
+    const neg = includesAnyGuarded(negBasis, NEG_WORDS);
     const pos = includesAnyGuarded(clause, POS_WORDS);
     let status = '미확인';
     let content = d.label+' 관련 언급';
@@ -616,7 +645,7 @@ function analyzeMemo(memo, baseline){
     }
     return {domain:d.key,label:d.label,status,content,time,excerpt,nextQuestion};
   });
-  const wordEmergency = includesAny(text, EMERGENCY_WORDS);
+  const wordEmergency = includesAny(text, EMERGENCY_WORDS) || includesAny(text, EMERGENCY_HELP_WORDS);
   const fallEmergency = detectFallEmergency(text);
   if(fallEmergency){
     // 낙상 표현 + 심각 징후 조합이 확인된 경우, 별도 카드를 새로 만들지 않고 이미 있는
@@ -629,12 +658,12 @@ function analyzeMemo(memo, baseline){
   }
   const emergency = wordEmergency || fallEmergency;
   if(wordEmergency){
-    const hitWord = EMERGENCY_WORDS.find(w=>text.includes(w));
+    const hitWord = EMERGENCY_WORDS.find(w=>text.includes(w)) || EMERGENCY_HELP_WORDS.find(w=>text.includes(w));
     const clause = clauses.find(c=>c.includes(hitWord)) || text;
     const timeHit = TIME_WORDS.find(t=>text.includes(t.kw));
     rows.push({
       domain:'emergency', label:'긴급 표현', status:'이상',
-      content:'자살·자해·화재·학대 등 즉시 확인이 필요한 표현 감지',
+      content:'자살·자해·화재·학대·거동불능 상태의 즉시 도움 요청 등 즉시 확인이 필요한 표현 감지',
       time: timeHit ? timeHit.label : '최근', excerpt: clause.trim(),
     });
   }
@@ -649,8 +678,14 @@ function classifyChange(domainKey, currentStatus, baseline, priorSignalsForClien
     if(!lastPrior || lastPrior.currentStatus!=='이상'){
       return baseVal==='어려움' ? '반복' : '신규';
     }
-    const consecutive = priorForDomain.filter(s=>s.currentStatus==='이상').length;
-    return consecutive>=2 ? '악화' : '반복';
+    // 검증 결과 발견 ①: 같은 위험영역·같은 대상자의 진행 중인 사건은 upsertDomainSignal이
+    // 새 레코드를 추가하지 않고 기존 신호를 계속 덮어쓰기(upsert) 때문에, priorSignalsForClient
+    // 배열에는 이 도메인 항목이 항상 최대 1건만 남는다. 예전에는 그 배열 길이로 "몇 번째
+    // 연속 이상인지"를 셌는데, 그러면 2건 이상 절대 나올 수 없어 '악화' 분기가 죽은 코드였다.
+    // upsert마다 정확히 누적되는 repeatCount(직전까지 몇 번째 확인이었는지)로 대신 판단한다:
+    // 이번이 2번째 확인(직전 repeatCount=1)이면 반복, 3번째 이상(직전 repeatCount>=2)이면 악화.
+    const priorRepeatCount = lastPrior.repeatCount || 1;
+    return priorRepeatCount>=2 ? '악화' : '반복';
   }
   if(currentStatus==='정상' && lastPrior && lastPrior.currentStatus==='이상'){ return '호전'; }
   return '-';
@@ -659,8 +694,10 @@ function classifyChange(domainKey, currentStatus, baseline, priorSignalsForClien
 function suggestUrgency(rows, emergency){
   if(emergency) return '긴급확인';
   const abnormal = rows.filter(r=>r.status==='이상' && r.domain!=='emergency');
-  if(abnormal.some(r=>r.changeType==='신규' || r.changeType==='악화')) return '당일확인';
-  if(abnormal.some(r=>r.changeType==='반복')) return '연계검토';
+  // 검증 결과 발견 ③: 반복 확인된 문제를 신규 발견보다 낮은 등급(연계검토)으로 내리면, 계속
+  // 방치된 문제가 오히려 우선순위에서 밀리는 역효과가 있었다. 반복·악화 모두 신규와 동일하게
+  // 당일확인 대상으로 본다(연계검토 단계 자체는 담당자가 화면에서 수동으로 계속 선택할 수 있다).
+  if(abnormal.some(r=>r.changeType==='신규' || r.changeType==='악화' || r.changeType==='반복')) return '당일확인';
   if(abnormal.length>0) return '추적관찰';
   return '특이신호없음';
 }
@@ -813,14 +850,18 @@ const embeddingAnalyzer = {
   key:'embedding', label:'임베딩 분석(AI)',
   async classify(text){
     const clauses = splitClauses(text);
-    const wordEmergency = includesAny(text, EMERGENCY_WORDS);
+    const wordEmergency = includesAny(text, EMERGENCY_WORDS) || includesAny(text, EMERGENCY_HELP_WORDS);
     const fallEmergency = detectFallEmergency(text);
     const emergency = wordEmergency || fallEmergency;
     const rows = await Promise.all(DOMAINS.map(async d=>{
-      const hit = d.kw.find(k=>text.includes(k));
-      if(!hit){
+      // 규칙 기반 analyzeMemo와 동일하게, kw 배열 순서가 아니라 텍스트에서 가장 먼저
+      // 등장하는 키워드를 근거 문장 선택 기준으로 쓴다(검증 결과 발견 ⑤).
+      const hitCandidates = d.kw.map(k=>({k, idx:text.indexOf(k)})).filter(c=>c.idx>=0);
+      if(hitCandidates.length===0){
         return {domain:d.key,label:d.label,status:'미확인',content:'이번 통화·방문에서 확인되지 않음',time:'-',excerpt:'원문 없음'};
       }
+      hitCandidates.sort((a,b)=>a.idx-b.idx);
+      const hit = hitCandidates[0].k;
       const clause = clauses.find(c=>c.includes(hit)) || text;
       const timeHit = TIME_WORDS.find(t=>text.includes(t.kw));
       const time = timeHit ? timeHit.label : '최근';
@@ -848,11 +889,11 @@ const embeddingAnalyzer = {
       }
     }
     if(wordEmergency){
-      const hitWord = EMERGENCY_WORDS.find(w=>text.includes(w));
+      const hitWord = EMERGENCY_WORDS.find(w=>text.includes(w)) || EMERGENCY_HELP_WORDS.find(w=>text.includes(w));
       const clause = clauses.find(c=>c.includes(hitWord)) || text;
       const timeHit = TIME_WORDS.find(t=>text.includes(t.kw));
       rows.push({domain:'emergency', label:'긴급 표현', status:'이상',
-        content:'자살·자해·화재·학대 등 즉시 확인이 필요한 표현 감지',
+        content:'자살·자해·화재·학대·거동불능 상태의 즉시 도움 요청 등 즉시 확인이 필요한 표현 감지',
         time: timeHit ? timeHit.label : '최근', excerpt: clause.trim(), method:'rule'});
     }
     return {rows, emergency, fallEmergency};
